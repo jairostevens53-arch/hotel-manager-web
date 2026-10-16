@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hotel Manager</title>
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ===== PANTALLA DE LOGIN ===== -->
+<section id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-mark">H</div>
+      <div class="brand-text">
+        <strong>Hotel Manager</strong>
+        <span>PANEL ADMINISTRATIVO</span>
+      </div>
+    </div>
+    <p class="login-tagline">Tu estancia, nuestra prioridad.</p>
+
+    <form id="login-form">
+      <label class="field">
+        <span>Correo</span>
+        <input type="email" id="login-email" required autocomplete="username" placeholder="admin@hotel.test">
+      </label>
+      <label class="field">
+        <span>Contraseña</span>
+        <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••">
+      </label>
+      <p id="login-error" class="login-error" hidden></p>
+      <button type="submit" id="login-submit">Entrar</button>
+    </form>
+  </div>
+  <p class="login-footnote">La primera carga puede tardar hasta un minuto: el servidor y la base de datos se reactivan tras un periodo sin uso.</p>
+</section>
+
+<!-- ===== APP (visible tras login) ===== -->
+<div id="app-shell" class="app-shell" hidden>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">H</div>
+      <span>Hotel Manager</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z"/></svg>
+        Panel general
+      </button>
+      <button class="nav-item" data-view="catalogo">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM4 10h16v10H4z"/></svg>
+        Catálogo
+      </button>
+      <button class="nav-item disabled" data-view="compras" title="Próximamente">
+        <svg viewBox="0 0 24 24"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L20 7H6"/></svg>
+        Compras
+      </button>
+      <button class="nav-item disabled" data-view="turnos" title="Próximamente">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm1 5v5l4 2"/></svg>
+        Auditoría de turnos
+      </button>
+    </nav>
+    <button id="logout-btn" class="logout-btn">Cerrar sesión</button>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1 id="view-title">Panel general</h1>
+      <div class="topbar-user">
+        <span id="user-name">—</span>
+        <span id="user-role" class="role-pill">—</span>
+      </div>
+    </header>
+
+    <div id="view-content" class="view-content">
+      <!-- ===== VISTA: DASHBOARD ===== -->
+      <section id="view-dashboard" class="view">
+        <div class="period-selector">
+          <span>Periodo:</span>
+          <button class="period-btn active" data-days="7">7 días</button>
+          <button class="period-btn" data-days="30">30 días</button>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <span class="kpi-label">Ventas totales</span>
+            <span class="kpi-value" id="kpi-sales">—</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label"># de ventas</span>
+            <span class="kpi-value" id="kpi-sales-count">—</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Gastos</span>
+            <span class="kpi-value" id="kpi-expenses">—</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Compras</span>
+            <span class="kpi-value" id="kpi-purchases">—</span>
+          </div>
+        </div>
+
+        <div class="panel-grid">
+          <div class="panel panel-wide">
+            <h2>Ventas por día</h2>
+            <canvas id="chart-sales-day" height="90"></canvas>
+          </div>
+          <div class="panel">
+            <h2>Productos más vendidos</h2>
+            <canvas id="chart-top-products" height="140"></canvas>
+          </div>
+          <div class="panel">
+            <h2>Stock bajo</h2>
+            <ul id="low-stock-list" class="simple-list">
+              <li class="muted">Cargando…</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h2>Turnos abiertos</h2>
+            <ul id="open-shifts-list" class="simple-list">
+              <li class="muted">Cargando…</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== VISTA: CATÁLOGO ===== -->
+      <section id="view-catalogo" class="view" hidden>
+        <div class="catalogo-header">
+          <input type="search" id="product-search" placeholder="Buscar producto…">
+          <button id="new-product-btn" class="btn-primary">+ Nuevo producto</button>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody">
+            <tr><td colspan="5" class="muted">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- ===== MODAL: NUEVO PRODUCTO ===== -->
+<div id="product-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2>Nuevo producto</h2>
+    <form id="product-form">
+      <label class="field">
+        <span>Nombre</span>
+        <input type="text" id="pf-name" required>
+      </label>
+      <label class="field">
+        <span>Categoría</span>
+        <select id="pf-category" required></select>
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span>Precio</span>
+          <input type="number" id="pf-price" step="0.01" min="0" required>
+        </label>
+        <label class="field">
+          <span>Stock inicial</span>
+          <input type="number" id="pf-stock" min="0" required>
+        </label>
+      </div>
+      <p id="product-form-error" class="login-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="product-cancel-btn" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
