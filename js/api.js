@@ -90,4 +90,29 @@ const Api = {
   createProduct(payload) {
     return this.request('/products', { method: 'POST', body: payload });
   },
+
+  suppliers() {
+    return this.request('/suppliers');
+  },
+
+  createSupplier(payload) {
+    return this.request('/suppliers', { method: 'POST', body: payload });
+  },
+
+  purchases() {
+    return this.request('/purchases');
+  },
+
+  createPurchase(payload) {
+    return this.request('/purchases', { method: 'POST', body: payload });
+  },
+
+  shifts(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/shifts${qs ? `?${qs}` : ''}`);
+  },
+
+  shiftDetail(id) {
+    return this.request(`/shifts/${id}`);
+  },
 };

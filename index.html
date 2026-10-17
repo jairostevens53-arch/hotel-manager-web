@@ -54,11 +54,11 @@
         <svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM4 10h16v10H4z"/></svg>
         Catálogo
       </button>
-      <button class="nav-item disabled" data-view="compras" title="Próximamente">
+      <button class="nav-item" data-view="compras">
         <svg viewBox="0 0 24 24"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L20 7H6"/></svg>
         Compras
       </button>
-      <button class="nav-item disabled" data-view="turnos" title="Próximamente">
+      <button class="nav-item" data-view="turnos">
         <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm1 5v5l4 2"/></svg>
         Auditoría de turnos
       </button>
@@ -149,6 +149,58 @@
           </tbody>
         </table>
       </section>
+
+      <!-- ===== VISTA: COMPRAS / PROVEEDORES ===== -->
+      <section id="view-compras" class="view" hidden>
+        <div class="catalogo-header">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="compras">Compras</button>
+            <button class="tab-btn" data-tab="proveedores">Proveedores</button>
+          </div>
+          <div class="header-actions">
+            <button id="new-supplier-btn" class="btn-secondary">+ Proveedor</button>
+            <button id="new-purchase-btn" class="btn-primary">+ Nueva compra</button>
+          </div>
+        </div>
+
+        <div id="tab-compras">
+          <table class="data-table">
+            <thead><tr><th>Fecha</th><th>Proveedor</th><th>Productos</th><th>Total</th></tr></thead>
+            <tbody id="purchases-tbody"><tr><td colspan="4" class="muted">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+
+        <div id="tab-proveedores" hidden>
+          <table class="data-table">
+            <thead><tr><th>Nombre</th><th>Teléfono</th></tr></thead>
+            <tbody id="suppliers-tbody"><tr><td colspan="2" class="muted">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== VISTA: AUDITORÍA DE TURNOS ===== -->
+      <section id="view-turnos" class="view" hidden>
+        <div class="catalogo-header">
+          <label class="checkbox-label">
+            <input type="checkbox" id="filter-diff">
+            Mostrar solo turnos con diferencia
+          </label>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Recepcionista</th>
+              <th>Apertura</th>
+              <th>Cierre</th>
+              <th>Fondo inicial</th>
+              <th>Esperado</th>
+              <th>Contado</th>
+              <th>Diferencia</th>
+            </tr>
+          </thead>
+          <tbody id="shifts-tbody"><tr><td colspan="7" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </section>
     </div>
   </main>
 </div>
@@ -182,6 +234,63 @@
         <button type="submit" class="btn-primary">Guardar</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ===== MODAL: NUEVO PROVEEDOR ===== -->
+<div id="supplier-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2>Nuevo proveedor</h2>
+    <form id="supplier-form">
+      <label class="field">
+        <span>Nombre</span>
+        <input type="text" id="sf-name" required>
+      </label>
+      <label class="field">
+        <span>Teléfono (opcional)</span>
+        <input type="text" id="sf-phone">
+      </label>
+      <p id="supplier-form-error" class="login-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="supplier-cancel-btn" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== MODAL: NUEVA COMPRA ===== -->
+<div id="purchase-modal" class="modal-overlay" hidden>
+  <div class="modal modal-wide">
+    <h2>Nueva compra</h2>
+    <form id="purchase-form">
+      <label class="field">
+        <span>Proveedor (opcional)</span>
+        <select id="pcf-supplier"><option value="">— Sin proveedor —</option></select>
+      </label>
+
+      <div id="purchase-items"></div>
+      <button type="button" id="add-purchase-item-btn" class="btn-secondary btn-small">+ Agregar producto</button>
+
+      <div class="purchase-total">Total: <strong id="purchase-total">$0.00</strong></div>
+
+      <p id="purchase-form-error" class="login-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="purchase-cancel-btn" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar compra</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== MODAL: DETALLE DE TURNO ===== -->
+<div id="shift-detail-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2>Detalle del turno</h2>
+    <div id="shift-detail-content"></div>
+    <div class="modal-actions">
+      <button type="button" id="shift-detail-close-btn" class="btn-secondary">Cerrar</button>
+    </div>
   </div>
 </div>
 
