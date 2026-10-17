@@ -118,10 +118,14 @@ async function loadDashboard() {
   try {
     const data = await Api.dashboard(currentDays);
     renderKpis(data.totals);
-    renderSalesByDayChart(data.sales_by_day);
-    renderTopProductsChart(data.top_products);
     renderLowStock(data.low_stock);
     renderOpenShifts(data.open_shifts);
+    if (typeof Chart === 'undefined') {
+      console.error('Chart.js no se cargó: revisa que exista js/chart.umd.min.js');
+      return;
+    }
+    renderSalesByDayChart(data.sales_by_day);
+    renderTopProductsChart(data.top_products);
   } catch (err) {
     document.getElementById('kpi-sales').textContent = '—';
     console.error('Error cargando el dashboard:', err.message);
@@ -130,6 +134,16 @@ async function loadDashboard() {
 
 function money(n) {
   return `$${Number(n).toFixed(2)}`;
+}
+
+// Escapa texto antes de insertarlo con innerHTML (evita inyección de HTML/JS).
+function esc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function renderKpis(totals) {
@@ -201,7 +215,7 @@ function renderLowStock(items) {
     return;
   }
   list.innerHTML = items
-    .map((p) => `<li><span>${p.name}</span><span class="stock-low">${p.stock} / mín. ${p.min_stock}</span></li>`)
+    .map((p) => `<li><span>${esc(p.name)}</span><span class="stock-low">${p.stock} / mín. ${p.min_stock}</span></li>`)
     .join('');
 }
 
@@ -212,7 +226,7 @@ function renderOpenShifts(shifts) {
     return;
   }
   list.innerHTML = shifts
-    .map((s) => `<li><span>${s.user.name}</span><span class="muted">desde ${new Date(s.opened_at).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' })}</span></li>`)
+    .map((s) => `<li><span>${esc(s.user.name)}</span><span class="muted">desde ${new Date(s.opened_at).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' })}</span></li>`)
     .join('');
 }
 
@@ -229,8 +243,8 @@ async function loadProducts(query = '') {
     tbody.innerHTML = products
       .map((p) => `
         <tr>
-          <td>${p.name}</td>
-          <td>${p.category ? p.category.name : '—'}</td>
+          <td>${esc(p.name)}</td>
+          <td>${p.category ? esc(p.category.name) : '—'}</td>
           <td>${money(p.price)}</td>
           <td class="${p.stock <= p.min_stock ? 'stock-low' : ''}">${p.stock}</td>
           <td><span class="status-badge ${p.active ? 'status-active' : 'status-inactive'}">${p.active ? 'Activo' : 'Inactivo'}</span></td>
@@ -238,7 +252,7 @@ async function loadProducts(query = '') {
       `)
       .join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" class="muted">Error al cargar: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="muted">Error al cargar: ${esc(err.message)}</td></tr>`;
   }
 }
 
@@ -271,7 +285,7 @@ async function loadCategoriesIntoForm() {
   const select = document.getElementById('pf-category');
   try {
     const categories = await Api.categories();
-    select.innerHTML = categories.map((c) => `<option value="${c.id}">${c.name}</option>`).join('');
+    select.innerHTML = categories.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   } catch {
     select.innerHTML = '<option value="">No se pudieron cargar las categorías</option>';
   }
@@ -323,14 +337,14 @@ async function loadPurchases() {
       .map((p) => `
         <tr>
           <td>${new Date(p.created_at).toLocaleDateString('es-SV')}</td>
-          <td>${p.supplier ? p.supplier.name : '—'}</td>
+          <td>${p.supplier ? esc(p.supplier.name) : '—'}</td>
           <td>${p.items.length} producto(s)</td>
           <td>${money(p.total)}</td>
         </tr>
       `)
       .join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4" class="muted">Error: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Error: ${esc(err.message)}</td></tr>`;
   }
 }
 
@@ -344,9 +358,9 @@ async function loadSuppliers() {
       tbody.innerHTML = '<tr><td colspan="2" class="muted">Sin proveedores registrados.</td></tr>';
       return;
     }
-    tbody.innerHTML = suppliers.map((s) => `<tr><td>${s.name}</td><td>${s.phone || '—'}</td></tr>`).join('');
+    tbody.innerHTML = suppliers.map((s) => `<tr><td>${esc(s.name)}</td><td>${esc(s.phone || '—')}</td></tr>`).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="2" class="muted">Error: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="2" class="muted">Error: ${esc(err.message)}</td></tr>`;
   }
 }
 
@@ -396,14 +410,14 @@ async function loadSuppliersIntoPurchaseForm() {
   try {
     const suppliers = await Api.suppliers();
     select.innerHTML = '<option value="">— Sin proveedor —</option>'
-      + suppliers.map((s) => `<option value="${s.id}">${s.name}</option>`).join('');
+      + suppliers.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
   } catch {
     select.innerHTML = '<option value="">— Sin proveedor —</option>';
   }
 }
 
 function productOptions() {
-  return productsCache.map((p) => `<option value="${p.id}">${p.name}</option>`).join('');
+  return productsCache.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
 }
 
 function addPurchaseItemRow() {
@@ -497,7 +511,7 @@ async function loadShifts() {
     tbody.innerHTML = shifts
       .map((s) => `
         <tr class="clickable-row" data-shift-id="${s.id}">
-          <td>${s.user.name}</td>
+          <td>${esc(s.user.name)}</td>
           <td>${new Date(s.opened_at).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' })}</td>
           <td>${s.closed_at ? new Date(s.closed_at).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' }) : '<span class="status-badge status-active">Abierto</span>'}</td>
           <td>${money(s.opening_amount)}</td>
@@ -512,7 +526,7 @@ async function loadShifts() {
       row.addEventListener('click', () => showShiftDetail(row.dataset.shiftId));
     });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="muted">Error: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="muted">Error: ${esc(err.message)}</td></tr>`;
   }
 }
 
@@ -527,7 +541,7 @@ async function showShiftDetail(id) {
     const { shift, summary } = await Api.shiftDetail(id);
     content.innerHTML = `
       <ul class="simple-list">
-        <li><span>Recepcionista</span><span>${shift.user.name}</span></li>
+        <li><span>Recepcionista</span><span>${esc(shift.user.name)}</span></li>
         <li><span>Fondo inicial</span><span>${money(summary.opening_amount)}</span></li>
         <li><span>Ventas en efectivo</span><span>${money(summary.cash_sales)}</span></li>
         <li><span>Ventas con tarjeta</span><span>${money(summary.card_sales)}</span></li>
@@ -536,11 +550,11 @@ async function showShiftDetail(id) {
         <li><span>Esperado en caja</span><span>${money(summary.expected_amount)}</span></li>
         <li><span>Contado</span><span>${shift.counted_amount !== null ? money(shift.counted_amount) : '— (turno abierto)'}</span></li>
         <li><span>Diferencia</span><span class="${shift.difference < 0 ? 'stock-low' : ''}">${shift.difference !== null ? money(shift.difference) : '—'}</span></li>
-        ${shift.notes ? `<li><span>Notas</span><span>${shift.notes}</span></li>` : ''}
+        ${shift.notes ? `<li><span>Notas</span><span>${esc(shift.notes)}</span></li>` : ''}
       </ul>
     `;
   } catch (err) {
-    content.innerHTML = `<p class="login-error" style="margin-top:12px;">${err.message}</p>`;
+    content.innerHTML = `<p class="login-error" style="margin-top:12px;">${esc(err.message)}</p>`;
   }
 }
 

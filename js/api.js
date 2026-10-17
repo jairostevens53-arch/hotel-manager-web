@@ -55,6 +55,13 @@ const Api = {
       // Respuesta sin cuerpo JSON (poco común, pero no debe romper la app).
     }
 
+    // Sesión vencida o token inválido: volver al login (excepto en el propio login).
+    if (response.status === 401 && path !== '/login') {
+      this.clearToken();
+      localStorage.removeItem('lopes_user');
+      location.reload();
+    }
+
     if (!response.ok) {
       const message = (data && (data.message || Object.values(data.errors || {}).flat()[0])) || `Error ${response.status}`;
       throw new Error(message);
