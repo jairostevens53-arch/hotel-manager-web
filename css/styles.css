@@ -367,3 +367,14 @@ button { font-family: inherit; cursor: pointer; }
   .catalogo-header { flex-direction: column; align-items: stretch; }
   .data-table { display: block; overflow-x: auto; }
 }
+
+/* ===== ACCIONES DE ADMINISTRACIÓN ===== */
+.row-actions { display: flex; gap: 6px; white-space: nowrap; }
+.btn-danger { color: var(--red); border-color: rgba(232, 96, 76, 0.4); }
+.btn-danger:hover:not(:disabled) { background: rgba(232, 96, 76, 0.12); }
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+.cap { text-transform: capitalize; }
+.modal-actions .btn-danger { margin-right: auto; }
+
+.pager { display: flex; gap: 12px; align-items: center; justify-content: flex-end; margin-top: 14px; }
+.pager:empty { display: none; }

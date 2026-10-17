@@ -5,7 +5,7 @@ const loginForm = document.getElementById('login-form');
 const loginError = document.getElementById('login-error');
 const loginSubmit = document.getElementById('login-submit');
 
-let charts = { salesDay: null, topProducts: null };
+let charts = { salesDay: null, topProducts: null, methods: null };
 let currentDays = 7;
 
 // ===== Arranque =====
@@ -37,8 +37,9 @@ function showApp(user) {
   document.getElementById('user-role').textContent = user.role;
 
   const isAdmin = user.role === 'admin';
-  document.querySelector('[data-view="compras"]').hidden = !isAdmin;
-  document.querySelector('[data-view="turnos"]').hidden = !isAdmin;
+  ['compras', 'turnos', 'categorias', 'ventas', 'gastos', 'usuarios'].forEach((v) => {
+    document.querySelector(`[data-view="${v}"]`).hidden = !isAdmin;
+  });
   document.getElementById('new-product-btn').hidden = !isAdmin;
 
   if (isAdmin) {
@@ -101,6 +102,10 @@ document.querySelectorAll('.nav-item').forEach((btn) => {
       loadSuppliersIntoPurchaseForm();
     }
     if (viewName === 'turnos') loadShifts();
+    if (viewName === 'categorias') loadCategories();
+    if (viewName === 'ventas') loadSales();
+    if (viewName === 'gastos') loadExpenses();
+    if (viewName === 'usuarios') loadUsers();
   });
 });
 
@@ -126,6 +131,7 @@ async function loadDashboard() {
     }
     renderSalesByDayChart(data.sales_by_day);
     renderTopProductsChart(data.top_products);
+    renderMethodsChart(data.sales_by_method);
   } catch (err) {
     document.getElementById('kpi-sales').textContent = '—';
     console.error('Error cargando el dashboard:', err.message);
@@ -233,11 +239,12 @@ function renderOpenShifts(shifts) {
 // ===== Catálogo =====
 async function loadProducts(query = '') {
   const tbody = document.getElementById('products-tbody');
-  tbody.innerHTML = '<tr><td colspan="5" class="muted">Cargando…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" class="muted">Cargando…</td></tr>';
   try {
-    const products = await Api.products(query);
+    const products = await Api.products(query, isAdmin());
+    productsById = Object.fromEntries(products.map((p) => [p.id, p]));
     if (!products.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="muted">No se encontraron productos.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="muted">No se encontraron productos.</td></tr>';
       return;
     }
     tbody.innerHTML = products
@@ -248,11 +255,15 @@ async function loadProducts(query = '') {
           <td>${money(p.price)}</td>
           <td class="${p.stock <= p.min_stock ? 'stock-low' : ''}">${p.stock}</td>
           <td><span class="status-badge ${p.active ? 'status-active' : 'status-inactive'}">${p.active ? 'Activo' : 'Inactivo'}</span></td>
+          ${isAdmin() ? `<td class="row-actions">
+            <button class="btn-secondary btn-small" data-edit-product="${p.id}">Editar</button>
+            ${p.active ? `<button class="btn-secondary btn-small btn-danger" data-delete-product="${p.id}">Desactivar</button>` : `<button class="btn-secondary btn-small" data-activate-product="${p.id}">Activar</button>`}
+          </td>` : '<td></td>'}
         </tr>
       `)
       .join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" class="muted">Error al cargar: ${esc(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">Error al cargar: ${esc(err.message)}</td></tr>`;
   }
 }
 
@@ -267,11 +278,7 @@ const productModal = document.getElementById('product-modal');
 const productForm = document.getElementById('product-form');
 const productFormError = document.getElementById('product-form-error');
 
-document.getElementById('new-product-btn').addEventListener('click', () => {
-  productForm.reset();
-  productFormError.hidden = true;
-  productModal.hidden = false;
-});
+document.getElementById('new-product-btn').addEventListener('click', () => openProductModal());
 
 document.getElementById('product-cancel-btn').addEventListener('click', () => {
   productModal.hidden = true;
@@ -300,10 +307,12 @@ productForm.addEventListener('submit', async (e) => {
     category_id: Number(document.getElementById('pf-category').value),
     price: Number(document.getElementById('pf-price').value),
     stock: Number(document.getElementById('pf-stock').value),
+    min_stock: Number(document.getElementById('pf-min-stock').value),
+    active: document.getElementById('pf-active').checked,
   };
 
   try {
-    await Api.createProduct(payload);
+    await (editingProductId ? Api.updateProduct(editingProductId, payload) : Api.createProduct(payload));
     productModal.hidden = true;
     loadProducts();
   } catch (err) {
@@ -323,12 +332,13 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
 });
 
 // ===== Compras =====
-async function loadPurchases() {
+async function loadPurchases(page = 1) {
   const tbody = document.getElementById('purchases-tbody');
   tbody.innerHTML = '<tr><td colspan="4" class="muted">Cargando…</td></tr>';
   try {
-    const result = await Api.purchases();
+    const result = await Api.purchases(page);
     const purchases = result.data || result;
+    renderPager('purchases-pager', result, loadPurchases);
     if (!purchases.length) {
       tbody.innerHTML = '<tr><td colspan="4" class="muted">Sin compras registradas.</td></tr>';
       return;
@@ -351,16 +361,17 @@ async function loadPurchases() {
 // ===== Proveedores =====
 async function loadSuppliers() {
   const tbody = document.getElementById('suppliers-tbody');
-  tbody.innerHTML = '<tr><td colspan="2" class="muted">Cargando…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="3" class="muted">Cargando…</td></tr>';
   try {
     const suppliers = await Api.suppliers();
+    suppliersById = Object.fromEntries(suppliers.map((s) => [s.id, s]));
     if (!suppliers.length) {
-      tbody.innerHTML = '<tr><td colspan="2" class="muted">Sin proveedores registrados.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" class="muted">Sin proveedores registrados.</td></tr>';
       return;
     }
-    tbody.innerHTML = suppliers.map((s) => `<tr><td>${esc(s.name)}</td><td>${esc(s.phone || '—')}</td></tr>`).join('');
+    tbody.innerHTML = suppliers.map((s) => `<tr><td>${esc(s.name)}</td><td>${esc(s.phone || '—')}</td><td class="row-actions"><button class="btn-secondary btn-small" data-edit-supplier="${s.id}">Editar</button></td></tr>`).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="2" class="muted">Error: ${esc(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="muted">Error: ${esc(err.message)}</td></tr>`;
   }
 }
 
@@ -368,11 +379,7 @@ const supplierModal = document.getElementById('supplier-modal');
 const supplierForm = document.getElementById('supplier-form');
 const supplierFormError = document.getElementById('supplier-form-error');
 
-document.getElementById('new-supplier-btn').addEventListener('click', () => {
-  supplierForm.reset();
-  supplierFormError.hidden = true;
-  supplierModal.hidden = false;
-});
+document.getElementById('new-supplier-btn').addEventListener('click', () => openSupplierModal());
 document.getElementById('supplier-cancel-btn').addEventListener('click', () => { supplierModal.hidden = true; });
 supplierModal.addEventListener('click', (e) => { if (e.target === supplierModal) supplierModal.hidden = true; });
 
@@ -384,7 +391,7 @@ supplierForm.addEventListener('submit', async (e) => {
     phone: document.getElementById('sf-phone').value.trim() || null,
   };
   try {
-    await Api.createSupplier(payload);
+    await (editingSupplierId ? Api.updateSupplier(editingSupplierId, payload) : Api.createSupplier(payload));
     supplierModal.hidden = true;
     loadSuppliers();
     loadSuppliersIntoPurchaseForm();
@@ -495,15 +502,16 @@ purchaseForm.addEventListener('submit', async (e) => {
 });
 
 // ===== Auditoría de turnos =====
-async function loadShifts() {
+async function loadShifts(page = 1) {
   const tbody = document.getElementById('shifts-tbody');
   tbody.innerHTML = '<tr><td colspan="7" class="muted">Cargando…</td></tr>';
   const onlyDiff = document.getElementById('filter-diff').checked;
   try {
-    const params = {};
+    const params = { page };
     if (onlyDiff) params.with_difference = 1;
     const result = await Api.shifts(params);
     const shifts = result.data || result;
+    renderPager('shifts-pager', result, loadShifts);
     if (!shifts.length) {
       tbody.innerHTML = '<tr><td colspan="7" class="muted">No hay turnos para mostrar.</td></tr>';
       return;
@@ -530,7 +538,7 @@ async function loadShifts() {
   }
 }
 
-document.getElementById('filter-diff').addEventListener('change', loadShifts);
+document.getElementById('filter-diff').addEventListener('change', () => loadShifts());
 
 async function showShiftDetail(id) {
   const content = document.getElementById('shift-detail-content');
@@ -563,4 +571,355 @@ document.getElementById('shift-detail-close-btn').addEventListener('click', () =
 });
 document.getElementById('shift-detail-modal').addEventListener('click', (e) => {
   if (e.target.id === 'shift-detail-modal') e.currentTarget.hidden = true;
+});
+
+
+// =====================================================================
+// ADMINISTRACIÓN: productos, categorías, proveedores, ventas y gastos
+// =====================================================================
+function isAdmin() {
+  const u = Api.getUser();
+  return !!u && u.role === 'admin';
+}
+const fmtDate = (v) => new Date(v).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' });
+
+// ----- Productos: editar y eliminar -----
+let productsById = {};
+let editingProductId = null;
+
+function openProductModal(product = null) {
+  editingProductId = product ? product.id : null;
+  productForm.reset();
+  productFormError.hidden = true;
+  document.getElementById('product-modal-title').textContent = product ? 'Editar producto' : 'Nuevo producto';
+  document.getElementById('pf-stock-label').textContent = product ? 'Stock' : 'Stock inicial';
+  document.getElementById('pf-active-row').hidden = !product;
+  if (product) {
+    document.getElementById('pf-name').value = product.name;
+    document.getElementById('pf-category').value = product.category_id;
+    document.getElementById('pf-price').value = product.price;
+    document.getElementById('pf-stock').value = product.stock;
+    document.getElementById('pf-min-stock').value = product.min_stock;
+    document.getElementById('pf-active').checked = !!product.active;
+  }
+  productModal.hidden = false;
+}
+
+document.getElementById('products-tbody').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('[data-edit-product]');
+  const delBtn = e.target.closest('[data-delete-product]');
+  const actBtn = e.target.closest('[data-activate-product]');
+  const reload = () => loadProducts(document.getElementById('product-search').value);
+  if (editBtn) return openProductModal(productsById[editBtn.dataset.editProduct]);
+  try {
+    if (actBtn) {
+      await Api.updateProduct(actBtn.dataset.activateProduct, { active: true });
+      reload();
+    } else if (delBtn) {
+      const p = productsById[delBtn.dataset.deleteProduct];
+      if (!confirm(`¿Desactivar "${p.name}"? Dejará de estar disponible para la venta; su historial se conserva.`)) return;
+      await Api.deleteProduct(p.id);
+      reload();
+    }
+  } catch (err) {
+    alert(`No se pudo completar la acción: ${err.message}`);
+  }
+});
+
+// ----- Categorías: crear, renombrar y eliminar -----
+let editingCategoryId = null;
+let categoriesById = {};
+const categoryModal = document.getElementById('category-modal');
+const categoryForm = document.getElementById('category-form');
+const categoryFormError = document.getElementById('category-form-error');
+
+async function loadCategories() {
+  const tbody = document.getElementById('categories-tbody');
+  tbody.innerHTML = '<tr><td colspan="3" class="muted">Cargando…</td></tr>';
+  try {
+    const [categories, products] = await Promise.all([Api.categories(), Api.products('', true)]);
+    categoriesById = Object.fromEntries(categories.map((c) => [c.id, c]));
+    const counts = {};
+    products.forEach((p) => { counts[p.category_id] = (counts[p.category_id] || 0) + 1; });
+    if (!categories.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="muted">Aún no hay categorías. Crea la primera con "+ Nueva categoría".</td></tr>';
+      return;
+    }
+    tbody.innerHTML = categories.map((c) => `
+      <tr>
+        <td>${esc(c.name)}</td>
+        <td>${counts[c.id] || 0}</td>
+        <td class="row-actions">
+          <button class="btn-secondary btn-small" data-edit-category="${c.id}">Editar</button>
+          <button class="btn-secondary btn-small btn-danger" data-delete-category="${c.id}" ${counts[c.id] ? 'disabled title="Tiene productos asociados: muévelos a otra categoría primero"' : ''}>Eliminar</button>
+        </td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="3" class="muted">Error: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+function openCategoryModal(category = null) {
+  editingCategoryId = category ? category.id : null;
+  categoryForm.reset();
+  categoryFormError.hidden = true;
+  document.getElementById('category-modal-title').textContent = category ? 'Editar categoría' : 'Nueva categoría';
+  if (category) document.getElementById('cf-name').value = category.name;
+  categoryModal.hidden = false;
+}
+
+document.getElementById('new-category-btn').addEventListener('click', () => openCategoryModal());
+document.getElementById('category-cancel-btn').addEventListener('click', () => { categoryModal.hidden = true; });
+categoryModal.addEventListener('click', (e) => { if (e.target === categoryModal) categoryModal.hidden = true; });
+
+categoryForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  categoryFormError.hidden = true;
+  const payload = { name: document.getElementById('cf-name').value.trim() };
+  try {
+    await (editingCategoryId ? Api.updateCategory(editingCategoryId, payload) : Api.createCategory(payload));
+    categoryModal.hidden = true;
+    loadCategories();
+    loadCategoriesIntoForm();
+  } catch (err) {
+    categoryFormError.textContent = err.message;
+    categoryFormError.hidden = false;
+  }
+});
+
+document.getElementById('categories-tbody').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('[data-edit-category]');
+  const delBtn = e.target.closest('[data-delete-category]');
+  if (editBtn) return openCategoryModal(categoriesById[editBtn.dataset.editCategory]);
+  if (!delBtn || delBtn.disabled) return;
+  const c = categoriesById[delBtn.dataset.deleteCategory];
+  if (!confirm(`¿Eliminar la categoría "${c.name}"?`)) return;
+  try {
+    await Api.deleteCategory(c.id);
+    loadCategories();
+    loadCategoriesIntoForm();
+  } catch (err) {
+    alert(`No se pudo eliminar la categoría: ${err.message}`);
+  }
+});
+
+// ----- Proveedores: editar -----
+let suppliersById = {};
+let editingSupplierId = null;
+
+function openSupplierModal(supplier = null) {
+  editingSupplierId = supplier ? supplier.id : null;
+  supplierForm.reset();
+  supplierFormError.hidden = true;
+  document.getElementById('supplier-modal-title').textContent = supplier ? 'Editar proveedor' : 'Nuevo proveedor';
+  if (supplier) {
+    document.getElementById('sf-name').value = supplier.name;
+    document.getElementById('sf-phone').value = supplier.phone || '';
+  }
+  supplierModal.hidden = false;
+}
+
+document.getElementById('suppliers-tbody').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-edit-supplier]');
+  if (btn) openSupplierModal(suppliersById[btn.dataset.editSupplier]);
+});
+
+// ----- Ventas: consultar y anular -----
+let currentSaleId = null;
+let salesPage = 1;
+const saleModal = document.getElementById('sale-detail-modal');
+
+async function loadSales(page = 1) {
+  salesPage = page;
+  const tbody = document.getElementById('sales-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="muted">Cargando…</td></tr>';
+  try {
+    const result = await Api.sales(page);
+    const sales = result.data || result;
+    renderPager('sales-pager', result, loadSales);
+    if (!sales.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted">Aún no hay ventas registradas.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = sales.map((s) => `
+      <tr class="clickable-row" data-sale-id="${s.id}">
+        <td>#${s.id}</td>
+        <td>${fmtDate(s.created_at)}</td>
+        <td>${s.user ? esc(s.user.name) : '—'}</td>
+        <td class="cap">${esc(s.payment_method)}</td>
+        <td>${money(s.total)}</td>
+        <td><span class="status-badge ${s.status === 'completada' ? 'status-active' : 'status-inactive'}">${esc(s.status)}</span></td>
+      </tr>`).join('');
+    tbody.querySelectorAll('.clickable-row').forEach((row) => {
+      row.addEventListener('click', () => showSaleDetail(row.dataset.saleId));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">Error: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+async function showSaleDetail(id) {
+  const content = document.getElementById('sale-detail-content');
+  const cancelBtn = document.getElementById('sale-cancel-btn');
+  currentSaleId = id;
+  cancelBtn.hidden = true;
+  content.innerHTML = '<p class="muted">Cargando…</p>';
+  saleModal.hidden = false;
+  try {
+    const data = await Api.sale(id);
+    const sale = data.sale || data;
+    const items = sale.items || data.items || [];
+    document.getElementById('sale-detail-title').textContent = `Venta #${sale.id}`;
+    content.innerHTML = `
+      <ul class="simple-list">
+        <li><span>Fecha</span><span>${fmtDate(sale.created_at)}</span></li>
+        <li><span>Cajero</span><span>${sale.user ? esc(sale.user.name) : '—'}</span></li>
+        <li><span>Método de pago</span><span class="cap">${esc(sale.payment_method)}</span></li>
+        <li><span>Estado</span><span>${esc(sale.status)}</span></li>
+        ${items.map((i) => `<li><span>${esc(i.quantity)} × ${i.product ? esc(i.product.name) : `Producto #${esc(i.product_id)}`}</span><span>${money(i.subtotal)}</span></li>`).join('')}
+        <li><strong>Total</strong><strong>${money(sale.total)}</strong></li>
+      </ul>`;
+    cancelBtn.hidden = sale.status !== 'completada';
+  } catch (err) {
+    content.innerHTML = `<p class="login-error">${esc(err.message)}</p>`;
+  }
+}
+
+document.getElementById('sale-cancel-btn').addEventListener('click', async () => {
+  if (!confirm('¿Anular esta venta? Esta acción no se puede deshacer.')) return;
+  try {
+    await Api.cancelSale(currentSaleId);
+    saleModal.hidden = true;
+    loadSales(salesPage);
+  } catch (err) {
+    alert(`No se pudo anular la venta: ${err.message}`);
+  }
+});
+document.getElementById('sale-detail-close-btn').addEventListener('click', () => { saleModal.hidden = true; });
+saleModal.addEventListener('click', (e) => { if (e.target === saleModal) saleModal.hidden = true; });
+
+// ----- Gastos: consultar -----
+async function loadExpenses(page = 1) {
+  const tbody = document.getElementById('expenses-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" class="muted">Cargando…</td></tr>';
+  try {
+    const result = await Api.expenses(page);
+    const expenses = result.data || result;
+    renderPager('expenses-pager', result, loadExpenses);
+    if (!expenses.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="muted">Aún no hay gastos registrados.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = expenses.map((x) => `
+      <tr>
+        <td>${fmtDate(x.created_at)}</td>
+        <td>${esc(x.description)}</td>
+        <td>${x.user ? esc(x.user.name) : '—'}</td>
+        <td>${money(x.amount)}</td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Error: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+
+// ----- Paginación común (la API devuelve 20 registros por página) -----
+function renderPager(id, result, goto) {
+  const el = document.getElementById(id);
+  if (!result || !result.last_page || result.last_page <= 1) { el.innerHTML = ''; return; }
+  const { current_page: cur, last_page: last } = result;
+  el.innerHTML = `
+    <button class="btn-secondary btn-small" data-page="${cur - 1}" ${cur <= 1 ? 'disabled' : ''}>Anterior</button>
+    <span class="muted">Página ${cur} de ${last}</span>
+    <button class="btn-secondary btn-small" data-page="${cur + 1}" ${cur >= last ? 'disabled' : ''}>Siguiente</button>`;
+  el.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => goto(Number(b.dataset.page))));
+}
+
+// ----- Gráfica: ventas por método de pago -----
+function renderMethodsChart(byMethod) {
+  const ctx = document.getElementById('chart-methods');
+  const labels = Object.keys(byMethod || {});
+  if (charts.methods) charts.methods.destroy();
+  charts.methods = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: labels.map((k) => byMethod[k]), backgroundColor: ['#f2994a', '#2dd4bf', '#8d96ab'], borderColor: '#0f1c38' }],
+    },
+    options: { plugins: { legend: { position: 'bottom', labels: { color: '#8d96ab' } } } },
+  });
+}
+
+// ----- Usuarios: crear, editar, activar y desactivar -----
+let usersById = {};
+let editingUserId = null;
+const userModal = document.getElementById('user-modal');
+const userForm = document.getElementById('user-form');
+const userFormError = document.getElementById('user-form-error');
+
+async function loadUsers() {
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" class="muted">Cargando…</td></tr>';
+  try {
+    const users = await Api.users();
+    usersById = Object.fromEntries(users.map((u) => [u.id, u]));
+    tbody.innerHTML = users.map((u) => `
+      <tr>
+        <td>${esc(u.name)}</td>
+        <td>${esc(u.email)}</td>
+        <td>${u.role === 'admin' ? 'Administrador' : 'Recepcionista'}</td>
+        <td><span class="status-badge ${u.active ? 'status-active' : 'status-inactive'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
+        <td class="row-actions"><button class="btn-secondary btn-small" data-edit-user="${u.id}">Editar</button></td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="muted">Error: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+function openUserModal(user = null) {
+  editingUserId = user ? user.id : null;
+  userForm.reset();
+  userFormError.hidden = true;
+  document.getElementById('user-modal-title').textContent = user ? 'Editar usuario' : 'Nuevo usuario';
+  document.getElementById('uf-password').required = !user;
+  document.getElementById('uf-password-label').textContent = user
+    ? 'Nueva contraseña (déjala vacía para no cambiarla)'
+    : 'Contraseña (mínimo 8 caracteres)';
+  document.getElementById('uf-active-row').hidden = !user;
+  if (user) {
+    document.getElementById('uf-name').value = user.name;
+    document.getElementById('uf-email').value = user.email;
+    document.getElementById('uf-role').value = user.role;
+    document.getElementById('uf-active').checked = !!user.active;
+  }
+  userModal.hidden = false;
+}
+
+document.getElementById('new-user-btn').addEventListener('click', () => openUserModal());
+document.getElementById('user-cancel-btn').addEventListener('click', () => { userModal.hidden = true; });
+userModal.addEventListener('click', (e) => { if (e.target === userModal) userModal.hidden = true; });
+document.getElementById('users-tbody').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-edit-user]');
+  if (btn) openUserModal(usersById[btn.dataset.editUser]);
+});
+
+userForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  userFormError.hidden = true;
+  const payload = {
+    name: document.getElementById('uf-name').value.trim(),
+    email: document.getElementById('uf-email').value.trim(),
+    role: document.getElementById('uf-role').value,
+  };
+  const password = document.getElementById('uf-password').value;
+  if (password) payload.password = password;
+  if (editingUserId) payload.active = document.getElementById('uf-active').checked;
+  try {
+    await (editingUserId ? Api.updateUser(editingUserId, payload) : Api.createUser(payload));
+    userModal.hidden = true;
+    loadUsers();
+  } catch (err) {
+    userFormError.textContent = err.message;
+    userFormError.hidden = false;
+  }
 });

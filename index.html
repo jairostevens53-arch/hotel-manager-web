@@ -54,6 +54,18 @@
         <svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM4 10h16v10H4z"/></svg>
         Catálogo
       </button>
+      <button class="nav-item" data-view="categorias">
+        <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+        Categorías
+      </button>
+      <button class="nav-item" data-view="ventas">
+        <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg>
+        Ventas
+      </button>
+      <button class="nav-item" data-view="gastos">
+        <svg viewBox="0 0 24 24"><path d="M3 7h18v12H3zM3 11h18M7 15h3"/></svg>
+        Gastos
+      </button>
       <button class="nav-item" data-view="compras">
         <svg viewBox="0 0 24 24"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L20 7H6"/></svg>
         Compras
@@ -61,6 +73,10 @@
       <button class="nav-item" data-view="turnos">
         <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm1 5v5l4 2"/></svg>
         Auditoría de turnos
+      </button>
+      <button class="nav-item" data-view="usuarios">
+        <svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+        Usuarios
       </button>
     </nav>
     <button id="logout-btn" class="logout-btn">Cerrar sesión</button>
@@ -113,6 +129,10 @@
             <canvas id="chart-top-products" height="140"></canvas>
           </div>
           <div class="panel">
+            <h2>Ventas por método de pago</h2>
+            <canvas id="chart-methods" height="140"></canvas>
+          </div>
+          <div class="panel">
             <h2>Stock bajo</h2>
             <ul id="low-stock-list" class="simple-list">
               <li class="muted">Cargando…</li>
@@ -142,11 +162,54 @@
               <th>Precio</th>
               <th>Stock</th>
               <th>Estado</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="products-tbody">
-            <tr><td colspan="5" class="muted">Cargando…</td></tr>
+            <tr><td colspan="6" class="muted">Cargando…</td></tr>
           </tbody>
+        </table>
+      </section>
+
+      <!-- ===== VISTA: CATEGORÍAS ===== -->
+      <section id="view-categorias" class="view" hidden>
+        <div class="catalogo-header">
+          <span class="muted">Las categorías agrupan los productos del catálogo.</span>
+          <button id="new-category-btn" class="btn-primary">+ Nueva categoría</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Categoría</th><th>Productos</th><th></th></tr></thead>
+          <tbody id="categories-tbody"><tr><td colspan="3" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </section>
+
+      <!-- ===== VISTA: VENTAS ===== -->
+      <section id="view-ventas" class="view" hidden>
+        <table class="data-table">
+          <thead><tr><th>N.º</th><th>Fecha</th><th>Cajero</th><th>Método</th><th>Total</th><th>Estado</th></tr></thead>
+          <tbody id="sales-tbody"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody>
+        </table>
+        <div id="sales-pager" class="pager"></div>
+      </section>
+
+      <!-- ===== VISTA: GASTOS ===== -->
+      <section id="view-gastos" class="view" hidden>
+        <table class="data-table">
+          <thead><tr><th>Fecha</th><th>Descripción</th><th>Registrado por</th><th>Monto</th></tr></thead>
+          <tbody id="expenses-tbody"><tr><td colspan="4" class="muted">Cargando…</td></tr></tbody>
+        </table>
+        <div id="expenses-pager" class="pager"></div>
+      </section>
+
+      <!-- ===== VISTA: USUARIOS ===== -->
+      <section id="view-usuarios" class="view" hidden>
+        <div class="catalogo-header">
+          <span class="muted">Crea cuentas para el personal y controla quién puede entrar.</span>
+          <button id="new-user-btn" class="btn-primary">+ Nuevo usuario</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="users-tbody"><tr><td colspan="5" class="muted">Cargando…</td></tr></tbody>
         </table>
       </section>
 
@@ -168,12 +231,13 @@
             <thead><tr><th>Fecha</th><th>Proveedor</th><th>Productos</th><th>Total</th></tr></thead>
             <tbody id="purchases-tbody"><tr><td colspan="4" class="muted">Cargando…</td></tr></tbody>
           </table>
+          <div id="purchases-pager" class="pager"></div>
         </div>
 
         <div id="tab-proveedores" hidden>
           <table class="data-table">
-            <thead><tr><th>Nombre</th><th>Teléfono</th></tr></thead>
-            <tbody id="suppliers-tbody"><tr><td colspan="2" class="muted">Cargando…</td></tr></tbody>
+            <thead><tr><th>Nombre</th><th>Teléfono</th><th></th></tr></thead>
+            <tbody id="suppliers-tbody"><tr><td colspan="3" class="muted">Cargando…</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -200,6 +264,7 @@
           </thead>
           <tbody id="shifts-tbody"><tr><td colspan="7" class="muted">Cargando…</td></tr></tbody>
         </table>
+        <div id="shifts-pager" class="pager"></div>
       </section>
     </div>
   </main>
@@ -208,7 +273,7 @@
 <!-- ===== MODAL: NUEVO PRODUCTO ===== -->
 <div id="product-modal" class="modal-overlay" hidden>
   <div class="modal">
-    <h2>Nuevo producto</h2>
+    <h2 id="product-modal-title">Nuevo producto</h2>
     <form id="product-form">
       <label class="field">
         <span>Nombre</span>
@@ -224,10 +289,17 @@
           <input type="number" id="pf-price" step="0.01" min="0" required>
         </label>
         <label class="field">
-          <span>Stock inicial</span>
+          <span id="pf-stock-label">Stock inicial</span>
           <input type="number" id="pf-stock" min="0" required>
         </label>
       </div>
+      <label class="field">
+        <span>Stock mínimo (alerta de stock bajo)</span>
+        <input type="number" id="pf-min-stock" min="0" value="0" required>
+      </label>
+      <label id="pf-active-row" class="checkbox-label" style="margin-bottom:16px">
+        <input type="checkbox" id="pf-active" checked> Producto activo (disponible para la venta)
+      </label>
       <p id="product-form-error" class="login-error" hidden></p>
       <div class="modal-actions">
         <button type="button" id="product-cancel-btn" class="btn-secondary">Cancelar</button>
@@ -240,7 +312,7 @@
 <!-- ===== MODAL: NUEVO PROVEEDOR ===== -->
 <div id="supplier-modal" class="modal-overlay" hidden>
   <div class="modal">
-    <h2>Nuevo proveedor</h2>
+    <h2 id="supplier-modal-title">Nuevo proveedor</h2>
     <form id="supplier-form">
       <label class="field">
         <span>Nombre</span>
@@ -278,6 +350,57 @@
       <div class="modal-actions">
         <button type="button" id="purchase-cancel-btn" class="btn-secondary">Cancelar</button>
         <button type="submit" class="btn-primary">Guardar compra</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== MODAL: CATEGORÍA ===== -->
+<div id="category-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2 id="category-modal-title">Nueva categoría</h2>
+    <form id="category-form">
+      <label class="field">
+        <span>Nombre</span>
+        <input type="text" id="cf-name" required maxlength="100">
+      </label>
+      <p id="category-form-error" class="login-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="category-cancel-btn" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== MODAL: DETALLE DE VENTA ===== -->
+<div id="sale-detail-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2 id="sale-detail-title">Detalle de la venta</h2>
+    <div id="sale-detail-content"></div>
+    <div class="modal-actions">
+      <button type="button" id="sale-cancel-btn" class="btn-secondary btn-danger" hidden>Anular venta</button>
+      <button type="button" id="sale-detail-close-btn" class="btn-secondary">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: USUARIO ===== -->
+<div id="user-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2 id="user-modal-title">Nuevo usuario</h2>
+    <form id="user-form">
+      <label class="field"><span>Nombre</span><input type="text" id="uf-name" required maxlength="100"></label>
+      <label class="field"><span>Correo</span><input type="email" id="uf-email" required maxlength="150"></label>
+      <label class="field"><span id="uf-password-label">Contraseña (mínimo 8 caracteres)</span><input type="password" id="uf-password" minlength="8" autocomplete="new-password"></label>
+      <label class="field"><span>Rol</span>
+        <select id="uf-role"><option value="recepcionista">Recepcionista</option><option value="admin">Administrador</option></select>
+      </label>
+      <label id="uf-active-row" class="checkbox-label" style="margin-bottom:16px"><input type="checkbox" id="uf-active" checked> Usuario activo (puede iniciar sesión)</label>
+      <p id="user-form-error" class="login-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="user-cancel-btn" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
       </div>
     </form>
   </div>

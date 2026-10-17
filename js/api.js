@@ -90,8 +90,12 @@ const Api = {
     return this.request('/categories');
   },
 
-  products(query = '') {
-    return this.request(`/products${query ? `?q=${encodeURIComponent(query)}` : ''}`);
+  products(query = '', includeInactive = false) {
+    const qs = new URLSearchParams();
+    if (query) qs.set('q', query);
+    if (includeInactive) qs.set('only_active', '0');
+    const s = qs.toString();
+    return this.request(`/products${s ? `?${s}` : ''}`);
   },
 
   createProduct(payload) {
@@ -106,8 +110,8 @@ const Api = {
     return this.request('/suppliers', { method: 'POST', body: payload });
   },
 
-  purchases() {
-    return this.request('/purchases');
+  purchases(page = 1) {
+    return this.request(`/purchases?page=${page}`);
   },
 
   createPurchase(payload) {
@@ -122,4 +126,23 @@ const Api = {
   shiftDetail(id) {
     return this.request(`/shifts/${id}`);
   },
+
+  createCategory(payload) { return this.request('/categories', { method: 'POST', body: payload }); },
+  updateCategory(id, payload) { return this.request(`/categories/${id}`, { method: 'PUT', body: payload }); },
+  deleteCategory(id) { return this.request(`/categories/${id}`, { method: 'DELETE' }); },
+
+  updateProduct(id, payload) { return this.request(`/products/${id}`, { method: 'PUT', body: payload }); },
+  deleteProduct(id) { return this.request(`/products/${id}`, { method: 'DELETE' }); },
+
+  updateSupplier(id, payload) { return this.request(`/suppliers/${id}`, { method: 'PUT', body: payload }); },
+
+  sales(page = 1) { return this.request(`/sales?page=${page}`); },
+  sale(id) { return this.request(`/sales/${id}`); },
+  cancelSale(id) { return this.request(`/sales/${id}/cancel`, { method: 'POST' }); },
+
+  expenses(page = 1) { return this.request(`/expenses?page=${page}`); },
+
+  users() { return this.request('/users'); },
+  createUser(payload) { return this.request('/users', { method: 'POST', body: payload }); },
+  updateUser(id, payload) { return this.request(`/users/${id}`, { method: 'PUT', body: payload }); },
 };
