@@ -34,20 +34,22 @@ function showApp(user) {
   loginScreen.hidden = true;
   appShell.hidden = false;
   document.getElementById('user-name').textContent = user.name;
-  document.getElementById('user-role').textContent = user.role;
+  document.getElementById('user-email').textContent = user.email || '';
+  document.getElementById('user-role').textContent = user.role === 'admin' ? 'Administrador' : 'Recepcionista';
 
   const isAdmin = user.role === 'admin';
-  ['compras', 'turnos', 'categorias', 'ventas', 'gastos', 'usuarios'].forEach((v) => {
+  ['dashboard', 'compras', 'turnos', 'categorias', 'ventas', 'gastos', 'usuarios'].forEach((v) => {
     document.querySelector(`[data-view="${v}"]`).hidden = !isAdmin;
   });
   document.getElementById('new-product-btn').hidden = !isAdmin;
 
   if (isAdmin) {
+    showView('dashboard');
     loadDashboard();
     loadCategoriesIntoForm();
   } else {
-    // Los recepcionistas no tienen acceso al dashboard; se les manda directo al catálogo.
-    document.querySelector('[data-view="catalogo"]').click();
+    // Los recepcionistas no tienen acceso al dashboard (la API lo restringe a admin): van directo al catálogo.
+    showView('catalogo');
   }
 }
 
@@ -83,29 +85,32 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
 });
 
 // ===== Navegación entre vistas =====
+function showView(viewName) {
+  const btn = document.querySelector(`.nav-item[data-view="${viewName}"]`);
+  document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.view').forEach((v) => (v.hidden = true));
+  document.getElementById(`view-${viewName}`).hidden = false;
+  document.getElementById('view-title').textContent = btn.textContent.trim();
+
+  if (viewName === 'catalogo') loadProducts();
+  if (viewName === 'compras') {
+    loadPurchases();
+    loadSuppliers();
+    loadProductsIntoPurchaseForm();
+    loadSuppliersIntoPurchaseForm();
+  }
+  if (viewName === 'turnos') loadShifts();
+  if (viewName === 'categorias') loadCategories();
+  if (viewName === 'ventas') loadSales();
+  if (viewName === 'gastos') loadExpenses();
+  if (viewName === 'usuarios') loadUsers();
+}
+
 document.querySelectorAll('.nav-item').forEach((btn) => {
   btn.addEventListener('click', () => {
     if (btn.classList.contains('disabled')) return;
-    document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    const viewName = btn.dataset.view;
-    document.querySelectorAll('.view').forEach((v) => (v.hidden = true));
-    document.getElementById(`view-${viewName}`).hidden = false;
-    document.getElementById('view-title').textContent = btn.textContent.trim();
-
-    if (viewName === 'catalogo') loadProducts();
-    if (viewName === 'compras') {
-      loadPurchases();
-      loadSuppliers();
-      loadProductsIntoPurchaseForm();
-      loadSuppliersIntoPurchaseForm();
-    }
-    if (viewName === 'turnos') loadShifts();
-    if (viewName === 'categorias') loadCategories();
-    if (viewName === 'ventas') loadSales();
-    if (viewName === 'gastos') loadExpenses();
-    if (viewName === 'usuarios') loadUsers();
+    showView(btn.dataset.view);
   });
 });
 
