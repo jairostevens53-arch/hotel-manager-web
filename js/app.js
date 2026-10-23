@@ -38,7 +38,7 @@ function showApp(user) {
   document.getElementById('user-role').textContent = user.role === 'admin' ? 'Administrador' : 'Recepcionista';
 
   const isAdmin = user.role === 'admin';
-  ['dashboard', 'compras', 'turnos', 'categorias', 'ventas', 'gastos', 'usuarios'].forEach((v) => {
+  ['dashboard', 'habitaciones', 'estadias', 'tarifas', 'compras', 'turnos', 'categorias', 'ventas', 'gastos', 'usuarios'].forEach((v) => {
     document.querySelector(`[data-view="${v}"]`).hidden = !isAdmin;
   });
   document.getElementById('new-product-btn').hidden = !isAdmin;
@@ -94,6 +94,9 @@ function showView(viewName) {
   document.getElementById('view-title').textContent = btn.textContent.trim();
 
   if (viewName === 'catalogo') loadProducts();
+  if (viewName === 'habitaciones') loadRooms();
+  if (viewName === 'estadias') loadStays();
+  if (viewName === 'tarifas') loadRates();
   if (viewName === 'compras') {
     loadPurchases();
     loadSuppliers();
@@ -737,13 +740,13 @@ const saleModal = document.getElementById('sale-detail-modal');
 async function loadSales(page = 1) {
   salesPage = page;
   const tbody = document.getElementById('sales-tbody');
-  tbody.innerHTML = '<tr><td colspan="6" class="muted">Cargando…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="muted">Cargando…</td></tr>';
   try {
     const result = await Api.sales(page);
     const sales = result.data || result;
     renderPager('sales-pager', result, loadSales);
     if (!sales.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="muted">Aún no hay ventas registradas.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="muted">Aún no hay ventas registradas.</td></tr>';
       return;
     }
     tbody.innerHTML = sales.map((s) => `
@@ -751,6 +754,8 @@ async function loadSales(page = 1) {
         <td>#${s.id}</td>
         <td>${fmtDate(s.created_at)}</td>
         <td>${s.user ? esc(s.user.name) : '—'}</td>
+        <td>${esc(conceptLabel(s.concept))}</td>
+        <td>${stayRef(s)}</td>
         <td class="cap">${esc(s.payment_method)}</td>
         <td>${money(s.total)}</td>
         <td><span class="status-badge ${s.status === 'completada' ? 'status-active' : 'status-inactive'}">${esc(s.status)}</span></td>
@@ -759,8 +764,26 @@ async function loadSales(page = 1) {
       row.addEventListener('click', () => showSaleDetail(row.dataset.saleId));
     });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" class="muted">Error: ${esc(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="muted">Error: ${esc(err.message)}</td></tr>`;
   }
+}
+
+// Concepto de la venta (campo nuevo): productos, estancia, hora extra o cargo adicional.
+function conceptLabel(c) {
+  const labels = {
+    productos: 'Productos',
+    estancia: 'Estancia',
+    hora_extra: 'Hora extra',
+    cargo_adicional: 'Cargo adicional',
+  };
+  return c ? (labels[c] || c) : 'Productos';
+}
+
+// Referencia a la estadía de una venta (stay_id es opcional).
+function stayRef(sale) {
+  if (!sale.stay_id) return '—';
+  const room = sale.stay && sale.stay.room ? ` · Hab. ${esc(sale.stay.room.number)}` : '';
+  return `#${esc(sale.stay_id)}${room}`;
 }
 
 async function showSaleDetail(id) {
@@ -779,8 +802,11 @@ async function showSaleDetail(id) {
       <ul class="simple-list">
         <li><span>Fecha</span><span>${fmtDate(sale.created_at)}</span></li>
         <li><span>Cajero</span><span>${sale.user ? esc(sale.user.name) : '—'}</span></li>
+        <li><span>Concepto</span><span>${esc(conceptLabel(sale.concept))}</span></li>
+        ${sale.stay_id ? `<li><span>Estadía</span><span>${stayRef(sale)}</span></li>` : ''}
         <li><span>Método de pago</span><span class="cap">${esc(sale.payment_method)}</span></li>
         <li><span>Estado</span><span>${esc(sale.status)}</span></li>
+        ${Number(sale.room_amount) > 0 ? `<li><span>Habitación / estancia</span><span>${money(sale.room_amount)}</span></li>` : ''}
         ${items.map((i) => `<li><span>${esc(i.quantity)} × ${i.product ? esc(i.product.name) : `Producto #${esc(i.product_id)}`}</span><span>${money(i.subtotal)}</span></li>`).join('')}
         <li><strong>Total</strong><strong>${money(sale.total)}</strong></li>
       </ul>`;
@@ -928,3 +954,320 @@ userForm.addEventListener('submit', async (e) => {
     userFormError.hidden = false;
   }
 });
+
+
+// =====================================================================
+// MÓDULO DE HABITACIONES: habitaciones, tarifas y estadías
+// =====================================================================
+const ROOM_STATUS = {
+  disponible: { label: 'Disponible', cls: 'status-active' },
+  ocupada: { label: 'Ocupada', cls: 'status-busy' },
+  limpieza: { label: 'Limpieza', cls: 'status-info' },
+  mantenimiento: { label: 'Mantenimiento', cls: 'status-warn' },
+};
+const STAY_STATUS = {
+  activa: { label: 'Activa', cls: 'status-busy' },
+  finalizada: { label: 'Finalizada', cls: 'status-active' },
+};
+const ROOM_TYPE = { estandar: 'Estándar', especial: 'Especial' };
+
+const badge = (map, key) => {
+  const s = map[key] || { label: key || '—', cls: 'status-inactive' };
+  return `<span class="status-badge ${s.cls}">${esc(s.label)}</span>`;
+};
+const roomTypeLabel = (t) => ROOM_TYPE[t] || 'Todas';
+// GET /stays y GET /rates devuelven paginado ({data: [...]}) o arreglo directo.
+const listOf = (r) => (Array.isArray(r) ? r : (r && r.data) || []);
+
+// ----- Habitaciones -----
+let roomsById = {};
+let editingRoomId = null;
+const roomModal = document.getElementById('room-modal');
+const roomForm = document.getElementById('room-form');
+const roomFormError = document.getElementById('room-form-error');
+
+function renderRoomSummary(summary) {
+  const s = summary || {};
+  const set = (id, v) => { document.getElementById(id).textContent = v ?? '—'; };
+  set('rk-disponible', s.disponible);
+  set('rk-ocupada-estandar', s.ocupada_estandar);
+  set('rk-ocupada-especial', s.ocupada_especial);
+  set('rk-limpieza', s.limpieza);
+  set('rk-mantenimiento', s.mantenimiento);
+}
+
+// Botones de cambio de estado: la API solo permite disponible / limpieza / mantenimiento,
+// y nunca sobre una habitación ocupada.
+function roomStatusButtons(r) {
+  if (!r.active || r.status === 'ocupada') return '';
+  const btn = (status, label) => `<button class="btn-secondary btn-small" data-room-status="${r.id}:${status}">${label}</button>`;
+  if (r.status === 'limpieza') return btn('disponible', 'Marcar lista') + btn('mantenimiento', 'Mantenimiento');
+  if (r.status === 'mantenimiento') return btn('disponible', 'Marcar disponible');
+  return btn('mantenimiento', 'Mantenimiento'); // disponible
+}
+
+async function loadRooms() {
+  const tbody = document.getElementById('rooms-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" class="muted">Cargando…</td></tr>';
+  try {
+    const params = {};
+    if (document.getElementById('room-show-inactive').checked) params.only_active = 0;
+    const result = await Api.rooms(params);
+    const rooms = result.rooms || [];
+    renderRoomSummary(result.summary);
+    roomsById = Object.fromEntries(rooms.map((r) => [r.id, r]));
+    // La API no filtra por estado: se filtra aquí.
+    const status = document.getElementById('room-filter-status').value;
+    const visible = status ? rooms.filter((r) => r.status === status) : rooms;
+    if (!visible.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="muted">No hay habitaciones para mostrar.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = visible.map((r) => {
+      const stay = r.current_stay;
+      const occupancy = stay
+        ? `${esc(stay.guest_name)}<span class="room-guest">sale ${fmtDate(stay.expected_checkout_at)}${stay.rate ? ` · ${esc(stay.rate.name)}` : ''}</span>`
+        : '—';
+      return `
+      <tr>
+        <td>${esc(r.number)}</td>
+        <td>${esc(r.floor)}</td>
+        <td>${esc(roomTypeLabel(r.type))}</td>
+        <td>${esc(r.beds)}</td>
+        <td>${badge(ROOM_STATUS, r.status)}${r.active ? '' : '<span class="status-badge status-inactive badge-gap">Fuera de servicio</span>'}</td>
+        <td>${occupancy}</td>
+        <td>${esc(r.notes || '—')}</td>
+        <td class="row-actions">
+          ${roomStatusButtons(r)}
+          <button class="btn-secondary btn-small" data-edit-room="${r.id}">Editar</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" class="muted">Error: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+function openRoomModal(room = null) {
+  editingRoomId = room ? room.id : null;
+  roomForm.reset();
+  roomFormError.hidden = true;
+  document.getElementById('room-modal-title').textContent = room ? 'Editar habitación' : 'Nueva habitación';
+  // Al crear, la API siempre la deja disponible y en servicio.
+  document.getElementById('rf-active-row').hidden = !room;
+  if (room) {
+    document.getElementById('rf-number').value = room.number;
+    document.getElementById('rf-floor').value = room.floor;
+    document.getElementById('rf-type').value = room.type;
+    document.getElementById('rf-beds').value = room.beds;
+    document.getElementById('rf-notes').value = room.notes || '';
+    document.getElementById('rf-active').checked = !!room.active;
+  }
+  roomModal.hidden = false;
+}
+
+document.getElementById('new-room-btn').addEventListener('click', () => openRoomModal());
+document.getElementById('room-cancel-btn').addEventListener('click', () => { roomModal.hidden = true; });
+roomModal.addEventListener('click', (e) => { if (e.target === roomModal) roomModal.hidden = true; });
+document.getElementById('room-filter-status').addEventListener('change', () => loadRooms());
+document.getElementById('room-show-inactive').addEventListener('change', () => loadRooms());
+
+document.getElementById('rooms-tbody').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('[data-edit-room]');
+  const statusBtn = e.target.closest('[data-room-status]');
+  if (editBtn) return openRoomModal(roomsById[editBtn.dataset.editRoom]);
+  if (!statusBtn) return;
+  const [id, status] = statusBtn.dataset.roomStatus.split(':');
+  try {
+    await Api.updateRoomStatus(id, status);
+    loadRooms();
+  } catch (err) {
+    alert(`No se pudo cambiar el estado: ${err.message}`);
+  }
+});
+
+roomForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  roomFormError.hidden = true;
+  const payload = {
+    number: document.getElementById('rf-number').value.trim(),
+    floor: Number(document.getElementById('rf-floor').value),
+    type: document.getElementById('rf-type').value,
+    beds: Number(document.getElementById('rf-beds').value),
+    notes: document.getElementById('rf-notes').value.trim() || null,
+  };
+  if (editingRoomId) payload.active = document.getElementById('rf-active').checked;
+  try {
+    await (editingRoomId ? Api.updateRoom(editingRoomId, payload) : Api.createRoom(payload));
+    roomModal.hidden = true;
+    loadRooms();
+  } catch (err) {
+    roomFormError.textContent = err.message;
+    roomFormError.hidden = false;
+  }
+});
+
+// ----- Tarifas -----
+let ratesById = {};
+let editingRateId = null;
+const rateModal = document.getElementById('rate-modal');
+const rateForm = document.getElementById('rate-form');
+const rateFormError = document.getElementById('rate-form-error');
+
+async function loadRates() {
+  const tbody = document.getElementById('rates-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" class="muted">Cargando…</td></tr>';
+  try {
+    const rates = listOf(await Api.rates({ only_active: 0 }));
+    ratesById = Object.fromEntries(rates.map((t) => [t.id, t]));
+    if (!rates.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="muted">Aún no hay tarifas. Crea la primera con "+ Nueva tarifa".</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rates.map((t) => `
+      <tr>
+        <td>${esc(t.name)}</td>
+        <td>${esc(roomTypeLabel(t.room_type))}</td>
+        <td>${esc(t.hours)} h</td>
+        <td>${money(t.price)}</td>
+        <td>${Number(t.extra_hour_price) > 0 ? money(t.extra_hour_price) : '—'}</td>
+        <td><span class="status-badge ${t.active ? 'status-active' : 'status-inactive'}">${t.active ? 'Activa' : 'Inactiva'}</span></td>
+        <td class="row-actions"><button class="btn-secondary btn-small" data-edit-rate="${t.id}">Editar</button></td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" class="muted">Error: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+function openRateModal(rate = null) {
+  editingRateId = rate ? rate.id : null;
+  rateForm.reset();
+  rateFormError.hidden = true;
+  document.getElementById('rate-modal-title').textContent = rate ? 'Editar tarifa' : 'Nueva tarifa';
+  // Al crear, la API siempre la deja activa.
+  document.getElementById('tf-active-row').hidden = !rate;
+  if (rate) {
+    document.getElementById('tf-name').value = rate.name;
+    document.getElementById('tf-hours').value = rate.hours;
+    document.getElementById('tf-room-type').value = rate.room_type || '';
+    document.getElementById('tf-price').value = rate.price;
+    document.getElementById('tf-extra').value = rate.extra_hour_price ?? 0;
+    document.getElementById('tf-active').checked = !!rate.active;
+  }
+  rateModal.hidden = false;
+}
+
+document.getElementById('new-rate-btn').addEventListener('click', () => openRateModal());
+document.getElementById('rate-cancel-btn').addEventListener('click', () => { rateModal.hidden = true; });
+rateModal.addEventListener('click', (e) => { if (e.target === rateModal) rateModal.hidden = true; });
+document.getElementById('rates-tbody').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-edit-rate]');
+  if (btn) openRateModal(ratesById[btn.dataset.editRate]);
+});
+
+rateForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  rateFormError.hidden = true;
+  const payload = {
+    name: document.getElementById('tf-name').value.trim(),
+    hours: Number(document.getElementById('tf-hours').value),
+    room_type: document.getElementById('tf-room-type').value || null,
+    price: Number(document.getElementById('tf-price').value),
+    extra_hour_price: Number(document.getElementById('tf-extra').value),
+  };
+  if (editingRateId) payload.active = document.getElementById('tf-active').checked;
+  try {
+    await (editingRateId ? Api.updateRate(editingRateId, payload) : Api.createRate(payload));
+    rateModal.hidden = true;
+    loadRates();
+  } catch (err) {
+    rateFormError.textContent = err.message;
+    rateFormError.hidden = false;
+  }
+});
+
+// ----- Estadías (consulta y check-out; el check-in y los cobros se hacen desde el POS) -----
+let staysPage = 1;
+let currentStayId = null;
+const stayDetailModal = document.getElementById('stay-detail-modal');
+
+async function loadStays(page = 1) {
+  staysPage = page;
+  const tbody = document.getElementById('stays-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="muted">Cargando…</td></tr>';
+  try {
+    const params = { page };
+    const status = document.getElementById('stay-filter-status').value;
+    if (status) params.status = status; // filtro del lado del servidor (solo admin)
+    const result = await Api.stays(params);
+    const stays = listOf(result);
+    renderPager('stays-pager', result, loadStays);
+    if (!stays.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted">No hay estadías para mostrar.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = stays.map((s) => `
+      <tr class="clickable-row" data-stay-id="${s.id}">
+        <td>${s.room ? esc(s.room.number) : `#${esc(s.room_id)}`}</td>
+        <td>${esc(s.guest_name)}</td>
+        <td>${s.rate ? esc(s.rate.name) : '—'}</td>
+        <td>${fmtDate(s.check_in_at)}</td>
+        <td>${s.checked_out_at ? fmtDate(s.checked_out_at) : `<span class="muted">prevista ${fmtDate(s.expected_checkout_at)}</span>`}</td>
+        <td>${badge(STAY_STATUS, s.status)}</td>
+      </tr>`).join('');
+    tbody.querySelectorAll('.clickable-row').forEach((row) => {
+      row.addEventListener('click', () => showStayDetail(row.dataset.stayId));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">Error: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+document.getElementById('stay-filter-status').addEventListener('change', () => loadStays());
+
+async function showStayDetail(id) {
+  const content = document.getElementById('stay-detail-content');
+  const checkoutBtn = document.getElementById('stay-checkout-btn');
+  currentStayId = id;
+  checkoutBtn.hidden = true;
+  content.innerHTML = '<p class="muted">Cargando…</p>';
+  stayDetailModal.hidden = false;
+  try {
+    const { stay, total_paid: totalPaid } = await Api.stay(id);
+    const sales = stay.sales || [];
+    document.getElementById('stay-detail-title').textContent = `Estadía #${stay.id}`;
+    content.innerHTML = `
+      <ul class="simple-list">
+        <li><span>Habitación</span><span>${stay.room ? esc(stay.room.number) : `#${esc(stay.room_id)}`}</span></li>
+        <li><span>Huésped</span><span>${esc(stay.guest_name)}</span></li>
+        ${stay.guest_document ? `<li><span>Documento</span><span>${esc(stay.guest_document)}</span></li>` : ''}
+        <li><span>Huéspedes</span><span>${esc(stay.guests ?? 1)}</span></li>
+        <li><span>Tarifa</span><span>${stay.rate ? esc(stay.rate.name) : '—'}</span></li>
+        <li><span>Registrada por</span><span>${stay.user ? esc(stay.user.name) : '—'}</span></li>
+        <li><span>Ingreso</span><span>${fmtDate(stay.check_in_at)}</span></li>
+        <li><span>Salida prevista</span><span>${fmtDate(stay.expected_checkout_at)}</span></li>
+        <li><span>Salida real</span><span>${stay.checked_out_at ? fmtDate(stay.checked_out_at) : '—'}</span></li>
+        <li><span>Horas extra</span><span>${esc(stay.extra_hours ?? 0)}</span></li>
+        <li><span>Estado</span><span>${badge(STAY_STATUS, stay.status)}</span></li>
+        ${stay.notes ? `<li><span>Notas</span><span style="white-space:pre-line;text-align:right">${esc(stay.notes)}</span></li>` : ''}
+        ${sales.map((v) => `<li><span>Venta #${esc(v.id)} · ${esc(conceptLabel(v.concept))}${v.status === 'anulada' ? ' (anulada)' : ''}</span><span>${money(v.total)}</span></li>`).join('')}
+        <li><strong>Total cobrado</strong><strong>${money(totalPaid)}</strong></li>
+      </ul>`;
+    checkoutBtn.hidden = stay.status !== 'activa';
+  } catch (err) {
+    content.innerHTML = `<p class="login-error">${esc(err.message)}</p>`;
+  }
+}
+
+document.getElementById('stay-checkout-btn').addEventListener('click', async () => {
+  if (!confirm('¿Registrar la salida del huésped? La habitación pasará a limpieza.')) return;
+  try {
+    await Api.checkoutStay(currentStayId);
+    stayDetailModal.hidden = true;
+    loadStays(staysPage);
+  } catch (err) {
+    alert(`No se pudo registrar la salida: ${err.message}`);
+  }
+});
+document.getElementById('stay-detail-close-btn').addEventListener('click', () => { stayDetailModal.hidden = true; });
+stayDetailModal.addEventListener('click', (e) => { if (e.target === stayDetailModal) stayDetailModal.hidden = true; });

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hotel Manager</title>
-<link rel="stylesheet" href="css/styles.css?v=3">
+<link rel="stylesheet" href="css/styles.css?v=4">
 <script src="js/chart.umd.min.js"></script>
 </head>
 <body>
@@ -49,6 +49,18 @@
       <button class="nav-item active" data-view="dashboard">
         <svg viewBox="0 0 24 24"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z"/></svg>
         Panel general
+      </button>
+      <button class="nav-item" data-view="habitaciones">
+        <svg viewBox="0 0 24 24"><path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 12a1.5 1.5 0 1 0 0-.01"/></svg>
+        Habitaciones
+      </button>
+      <button class="nav-item" data-view="estadias">
+        <svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM4 10h16M8 3v4M16 3v4"/></svg>
+        Estadías
+      </button>
+      <button class="nav-item" data-view="tarifas">
+        <svg viewBox="0 0 24 24"><path d="M3 12l9-9h9v9l-9 9zM16 8h.01"/></svg>
+        Tarifas
       </button>
       <button class="nav-item" data-view="catalogo">
         <svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM4 10h16v10H4z"/></svg>
@@ -148,6 +160,63 @@
         </div>
       </section>
 
+      <!-- ===== VISTA: HABITACIONES ===== -->
+      <section id="view-habitaciones" class="view" hidden>
+        <div class="kpi-row">
+          <div class="kpi-card"><span class="kpi-label">Disponibles</span><span class="kpi-value" id="rk-disponible">—</span></div>
+          <div class="kpi-card"><span class="kpi-label">Ocupadas (estándar)</span><span class="kpi-value" id="rk-ocupada-estandar">—</span></div>
+          <div class="kpi-card"><span class="kpi-label">Ocupadas (especial)</span><span class="kpi-value" id="rk-ocupada-especial">—</span></div>
+          <div class="kpi-card"><span class="kpi-label">En limpieza</span><span class="kpi-value" id="rk-limpieza">—</span></div>
+          <div class="kpi-card"><span class="kpi-label">Mantenimiento</span><span class="kpi-value" id="rk-mantenimiento">—</span></div>
+        </div>
+        <div class="catalogo-header">
+          <div class="header-actions">
+            <select id="room-filter-status">
+              <option value="">Todos los estados</option>
+              <option value="disponible">Disponible</option>
+              <option value="ocupada">Ocupada</option>
+              <option value="limpieza">Limpieza</option>
+              <option value="mantenimiento">Mantenimiento</option>
+            </select>
+            <label class="checkbox-label"><input type="checkbox" id="room-show-inactive"> Mostrar fuera de servicio</label>
+          </div>
+          <button id="new-room-btn" class="btn-primary">+ Nueva habitación</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>N.º</th><th>Piso</th><th>Tipo</th><th>Camas</th><th>Estado</th><th>Ocupación</th><th>Notas</th><th></th></tr></thead>
+          <tbody id="rooms-tbody"><tr><td colspan="8" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </section>
+
+      <!-- ===== VISTA: ESTADÍAS ===== -->
+      <section id="view-estadias" class="view" hidden>
+        <div class="catalogo-header">
+          <select id="stay-filter-status">
+            <option value="">Todas las estadías</option>
+            <option value="activa">Activas</option>
+            <option value="finalizada">Finalizadas</option>
+          </select>
+          <span class="muted">El check-in y los cobros se hacen desde el punto de venta, con el turno abierto.</span>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Habitación</th><th>Huésped</th><th>Tarifa</th><th>Ingreso</th><th>Salida</th><th>Estado</th></tr></thead>
+          <tbody id="stays-tbody"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody>
+        </table>
+        <div id="stays-pager" class="pager"></div>
+      </section>
+
+      <!-- ===== VISTA: TARIFAS ===== -->
+      <section id="view-tarifas" class="view" hidden>
+        <div class="catalogo-header">
+          <span class="muted">Define cuánto se cobra por horas, noche o 24 horas según el tipo de habitación.</span>
+          <button id="new-rate-btn" class="btn-primary">+ Nueva tarifa</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Nombre</th><th>Tipo de habitación</th><th>Horas</th><th>Precio</th><th>Hora extra</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="rates-tbody"><tr><td colspan="7" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </section>
+
       <!-- ===== VISTA: CATÁLOGO ===== -->
       <section id="view-catalogo" class="view" hidden>
         <div class="catalogo-header">
@@ -187,8 +256,8 @@
       <!-- ===== VISTA: VENTAS ===== -->
       <section id="view-ventas" class="view" hidden>
         <table class="data-table">
-          <thead><tr><th>N.º</th><th>Fecha</th><th>Cajero</th><th>Método</th><th>Total</th><th>Estado</th></tr></thead>
-          <tbody id="sales-tbody"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody>
+          <thead><tr><th>N.º</th><th>Fecha</th><th>Cajero</th><th>Concepto</th><th>Estadía</th><th>Método</th><th>Total</th><th>Estado</th></tr></thead>
+          <tbody id="sales-tbody"><tr><td colspan="8" class="muted">Cargando…</td></tr></tbody>
         </table>
         <div id="sales-pager" class="pager"></div>
       </section>
@@ -269,6 +338,70 @@
       </section>
     </div>
   </main>
+</div>
+
+<!-- ===== MODAL: HABITACIÓN ===== -->
+<div id="room-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2 id="room-modal-title">Nueva habitación</h2>
+    <form id="room-form">
+      <div class="field-row">
+        <label class="field"><span>Número</span><input type="text" id="rf-number" required maxlength="10"></label>
+        <label class="field"><span>Piso</span><input type="number" id="rf-floor" min="0" max="50" value="1" required></label>
+      </div>
+      <div class="field-row">
+        <label class="field"><span>Tipo</span>
+          <select id="rf-type"><option value="estandar">Estándar</option><option value="especial">Especial</option></select>
+        </label>
+        <label class="field"><span>Camas</span><input type="number" id="rf-beds" min="1" max="10" value="1" required></label>
+      </div>
+      <label class="field"><span>Notas (opcional)</span><input type="text" id="rf-notes" maxlength="500"></label>
+      <label id="rf-active-row" class="checkbox-label" style="margin-bottom:16px"><input type="checkbox" id="rf-active" checked> Habitación en servicio</label>
+      <p id="room-form-error" class="login-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="room-cancel-btn" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== MODAL: TARIFA ===== -->
+<div id="rate-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2 id="rate-modal-title">Nueva tarifa</h2>
+    <form id="rate-form">
+      <label class="field"><span>Nombre (ej. 6 horas, Por noche, 24 horas)</span><input type="text" id="tf-name" required maxlength="100"></label>
+      <div class="field-row">
+        <label class="field"><span>Horas incluidas</span><input type="number" id="tf-hours" min="1" max="168" required></label>
+        <label class="field"><span>Aplica a</span>
+          <select id="tf-room-type"><option value="">Todas las habitaciones</option><option value="estandar">Estándar</option><option value="especial">Especial</option></select>
+        </label>
+      </div>
+      <div class="field-row">
+        <label class="field"><span>Precio</span><input type="number" id="tf-price" step="0.01" min="0" required></label>
+        <label class="field"><span>Precio por hora extra</span><input type="number" id="tf-extra" step="0.01" min="0" value="0" required></label>
+      </div>
+      <label id="tf-active-row" class="checkbox-label" style="margin-bottom:16px"><input type="checkbox" id="tf-active" checked> Tarifa activa</label>
+      <p id="rate-form-error" class="login-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="rate-cancel-btn" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== MODAL: DETALLE DE ESTADÍA ===== -->
+<div id="stay-detail-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <h2 id="stay-detail-title">Detalle de la estadía</h2>
+    <div id="stay-detail-content"></div>
+    <div class="modal-actions">
+      <button type="button" id="stay-checkout-btn" class="btn-primary" hidden>Hacer check-out</button>
+      <button type="button" id="stay-detail-close-btn" class="btn-secondary">Cerrar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ===== MODAL: NUEVO PRODUCTO ===== -->
@@ -418,7 +551,7 @@
   </div>
 </div>
 
-<script src="js/api.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/api.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
 </body>
 </html>

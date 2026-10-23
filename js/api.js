@@ -142,6 +142,32 @@ const Api = {
 
   expenses(page = 1) { return this.request(`/expenses?page=${page}`); },
 
+  // ----- Módulo de habitaciones -----
+  // GET /rooms devuelve { summary, rooms }. only_active=0 incluye las fuera de servicio.
+  rooms(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/rooms${qs ? `?${qs}` : ''}`);
+  },
+  createRoom(payload) { return this.request('/rooms', { method: 'POST', body: payload }); },
+  updateRoom(id, payload) { return this.request(`/rooms/${id}`, { method: 'PUT', body: payload }); },
+  // Cambia el estado (disponible | limpieza | mantenimiento). 'ocupada' solo cambia con check-in/out.
+  updateRoomStatus(id, status) { return this.request(`/rooms/${id}/status`, { method: 'PATCH', body: { status } }); },
+
+  rates(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/rates${qs ? `?${qs}` : ''}`);
+  },
+  createRate(payload) { return this.request('/rates', { method: 'POST', body: payload }); },
+  updateRate(id, payload) { return this.request(`/rates/${id}`, { method: 'PUT', body: payload }); },
+
+  stays(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/stays${qs ? `?${qs}` : ''}`);
+  },
+  // GET /stays/{id} devuelve { stay, total_paid }.
+  stay(id) { return this.request(`/stays/${id}`); },
+  checkoutStay(id) { return this.request(`/stays/${id}/checkout`, { method: 'POST' }); },
+
   users() { return this.request('/users'); },
   createUser(payload) { return this.request('/users', { method: 'POST', body: payload }); },
   updateUser(id, payload) { return this.request(`/users/${id}`, { method: 'PUT', body: payload }); },
