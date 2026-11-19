@@ -36,10 +36,24 @@ function showApp(user) {
   document.getElementById('user-name').textContent = user.name;
   document.getElementById('user-email').textContent = user.email || '';
   document.getElementById('user-role').textContent = ({ admin: 'Administrador', recepcionista: 'Recepcionista', limpieza: 'Limpieza', mantenimiento: 'Mantenimiento' })[user.role] || user.role;
+  document.getElementById('user-avatar').textContent = (user.name || '?').trim().charAt(0).toLocaleUpperCase('es-SV');
 
   const isAdmin = user.role === 'admin';
   document.querySelectorAll('.nav-item[data-role]').forEach((item) => {
     item.hidden = !item.dataset.role.split(',').includes(user.role);
+  });
+  document.querySelectorAll('[data-nav-group]').forEach((group) => {
+    group.hidden = !group.querySelector('.nav-item:not([hidden])');
+  });
+  const mobileNav = document.getElementById('mobile-nav');
+  mobileNav.innerHTML = '<option value="">Ir a una sección…</option>';
+  document.querySelectorAll('[data-nav-group]:not([hidden])').forEach((group) => {
+    const optionGroup = document.createElement('optgroup');
+    optionGroup.label = group.querySelector('.nav-group-title').textContent.trim();
+    group.querySelectorAll('.nav-item:not([hidden])').forEach((item) => {
+      const option = document.createElement('option'); option.value = item.dataset.view; option.textContent = item.textContent.trim(); optionGroup.appendChild(option);
+    });
+    mobileNav.appendChild(optionGroup);
   });
   document.getElementById('new-product-btn').hidden = !isAdmin;
   document.getElementById('new-room-btn').hidden = !isAdmin;
@@ -100,9 +114,19 @@ function showView(viewName) {
   const btn = document.querySelector(`.nav-item[data-view="${viewName}"]`);
   document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach((b) => b.removeAttribute('aria-current'));
+  btn.setAttribute('aria-current', 'page');
   document.querySelectorAll('.view').forEach((v) => (v.hidden = true));
   document.getElementById(`view-${viewName}`).hidden = false;
   document.getElementById('view-title').textContent = btn.textContent.trim();
+  const descriptions = {
+    dashboard: 'Resumen de actividad y control del hotel.', habitaciones: 'Consulta disponibilidad, ocupación y tareas por habitación.', estadias: 'Entradas activas, cargos y salidas de huéspedes.',
+    tarifas: 'Precios vigentes para reservas y estadías.', catalogo: 'Productos, precios y existencias actuales.', categorias: 'Organiza los productos del hotel.', ventas: 'Ventas registradas desde caja y estadías.', gastos: 'Gastos operativos registrados en los turnos.',
+    compras: 'Compras de inventario y proveedores.', turnos: 'Revisa cierres, montos esperados y diferencias.', usuarios: 'Cuentas del equipo y niveles de acceso.', huespedes: 'Busca y actualiza la información de los huéspedes.',
+    reservas: 'Programa ingresos y confirma el check-in.', tareas: 'Asigna y actualiza tareas de limpieza y mantenimiento.', caja: 'Abre el turno, registra operaciones y concilia el efectivo.', inventario: 'Trazabilidad de entradas, salidas y ajustes de stock.',
+  };
+  document.getElementById('view-description').textContent = descriptions[viewName] || '';
+  document.getElementById('mobile-nav').value = viewName;
 
   if (viewName === 'catalogo') loadProducts();
   if (viewName === 'habitaciones') loadRooms();
@@ -132,6 +156,8 @@ document.querySelectorAll('.nav-item').forEach((btn) => {
     showView(btn.dataset.view);
   });
 });
+document.querySelectorAll('[data-go-view]').forEach((btn) => btn.addEventListener('click', () => showView(btn.dataset.goView)));
+document.getElementById('mobile-nav').addEventListener('change', (e) => { if (e.target.value) showView(e.target.value); });
 
 // ===== Dashboard =====
 document.querySelectorAll('.period-btn').forEach((btn) => {

@@ -305,6 +305,10 @@ document.addEventListener('keydown', (e) => {
 
 // Ordenamiento local accesible sobre las filas que ya devolvió el API (no cambia los datos).
 document.querySelectorAll('.data-table').forEach((table) => {
+  if (!table.parentElement.classList.contains('table-wrap')) {
+    const wrapper = document.createElement('div'); wrapper.className = 'table-wrap';
+    table.parentElement.insertBefore(wrapper, table); wrapper.appendChild(table);
+  }
   table.querySelectorAll('thead th').forEach((th) => {
     if (!th.textContent.trim()) return;
     th.tabIndex = 0; th.classList.add('sortable'); th.title = `Ordenar por ${th.textContent.trim()}`;

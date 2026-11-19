@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hotel Manager</title>
-<link rel="stylesheet" href="css/styles.css?v=5">
+<link rel="stylesheet" href="css/styles.css?v=6">
 <script src="js/chart.umd.min.js"></script>
 </head>
 <body>
@@ -46,63 +46,51 @@
       <span>Hotel Manager</span>
     </div>
     <nav class="sidebar-nav" aria-label="Navegación principal">
-      <button class="nav-item active" data-view="dashboard" data-role="admin">
-        <svg viewBox="0 0 24 24"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z"/></svg>
-        Panel general
-      </button>
-      <button class="nav-item" data-view="habitaciones" data-role="admin,recepcionista,limpieza,mantenimiento">
-        <svg viewBox="0 0 24 24"><path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 12a1.5 1.5 0 1 0 0-.01"/></svg>
-        Habitaciones
-      </button>
-      <button class="nav-item" data-view="estadias" data-role="admin,recepcionista">
-        <svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM4 10h16M8 3v4M16 3v4"/></svg>
-        Estadías
-      </button>
-      <button class="nav-item" data-view="tarifas" data-role="admin,recepcionista">
-        <svg viewBox="0 0 24 24"><path d="M3 12l9-9h9v9l-9 9zM16 8h.01"/></svg>
-        Tarifas
-      </button>
-      <button class="nav-item" data-view="catalogo" data-role="admin,recepcionista">
-        <svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM4 10h16v10H4z"/></svg>
-        Catálogo
-      </button>
-      <button class="nav-item" data-view="categorias" data-role="admin">
-        <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
-        Categorías
-      </button>
-      <button class="nav-item" data-view="ventas" data-role="admin,recepcionista">
-        <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg>
-        Ventas
-      </button>
-      <button class="nav-item" data-view="gastos" data-role="admin,recepcionista">
-        <svg viewBox="0 0 24 24"><path d="M3 7h18v12H3zM3 11h18M7 15h3"/></svg>
-        Gastos
-      </button>
-      <button class="nav-item" data-view="compras" data-role="admin">
-        <svg viewBox="0 0 24 24"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L20 7H6"/></svg>
-        Compras
-      </button>
-      <button class="nav-item" data-view="turnos" data-role="admin">
-        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm1 5v5l4 2"/></svg>
-        Auditoría de turnos
-      </button>
-      <button class="nav-item" data-view="usuarios" data-role="admin">
-        <svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
-        Usuarios
-      </button>
-      <button class="nav-item" data-view="huespedes" data-role="admin,recepcionista">Huéspedes</button>
-      <button class="nav-item" data-view="reservas" data-role="admin,recepcionista">Reservas</button>
-      <button class="nav-item" data-view="tareas" data-role="admin,recepcionista,limpieza,mantenimiento">Tareas</button>
-      <button class="nav-item" data-view="caja" data-role="admin,recepcionista">Caja</button>
-      <button class="nav-item" data-view="inventario" data-role="admin">Movimientos</button>
+      <select id="mobile-nav" aria-label="Ir a una sección"><option value="">Navegar por el panel</option></select>
+      <div class="nav-group" data-nav-group>
+        <span class="nav-group-title">Resumen</span>
+        <button class="nav-item active" data-view="dashboard" data-role="admin"><svg viewBox="0 0 24 24"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z"/></svg>Panel general</button>
+      </div>
+      <div class="nav-group" data-nav-group>
+        <span class="nav-group-title">Operación</span>
+        <button class="nav-item" data-view="habitaciones" data-role="admin,recepcionista,limpieza,mantenimiento"><svg viewBox="0 0 24 24"><path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 12a1.5 1.5 0 1 0 0-.01"/></svg>Habitaciones</button>
+        <button class="nav-item" data-view="estadias" data-role="admin,recepcionista"><svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM4 10h16M8 3v4M16 3v4"/></svg>Estadías</button>
+        <button class="nav-item" data-view="reservas" data-role="admin,recepcionista">Reservas</button>
+        <button class="nav-item" data-view="huespedes" data-role="admin,recepcionista">Huéspedes</button>
+        <button class="nav-item" data-view="tareas" data-role="admin,recepcionista,limpieza,mantenimiento">Tareas</button>
+        <button class="nav-item" data-view="caja" data-role="admin,recepcionista">Caja</button>
+      </div>
+      <div class="nav-group" data-nav-group>
+        <span class="nav-group-title">Inventario</span>
+        <button class="nav-item" data-view="catalogo" data-role="admin,recepcionista"><svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM4 10h16v10H4z"/></svg>Productos</button>
+        <button class="nav-item" data-view="categorias" data-role="admin"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Categorías</button>
+        <button class="nav-item" data-view="compras" data-role="admin"><svg viewBox="0 0 24 24"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L20 7H6"/></svg>Compras y proveedores</button>
+        <button class="nav-item" data-view="inventario" data-role="admin">Movimientos</button>
+      </div>
+      <div class="nav-group" data-nav-group>
+        <span class="nav-group-title">Finanzas</span>
+        <button class="nav-item" data-view="ventas" data-role="admin,recepcionista"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg>Ventas</button>
+        <button class="nav-item" data-view="gastos" data-role="admin,recepcionista"><svg viewBox="0 0 24 24"><path d="M3 7h18v12H3zM3 11h18M7 15h3"/></svg>Gastos</button>
+        <button class="nav-item" data-view="turnos" data-role="admin"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm1 5v5l4 2"/></svg>Auditoría de turnos</button>
+      </div>
+      <div class="nav-group" data-nav-group>
+        <span class="nav-group-title">Configuración</span>
+        <button class="nav-item" data-view="tarifas" data-role="admin,recepcionista"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h9v9l-9 9zM16 8h.01"/></svg>Tarifas</button>
+        <button class="nav-item" data-view="usuarios" data-role="admin"><svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Usuarios</button>
+      </div>
     </nav>
     <button id="logout-btn" class="logout-btn">Cerrar sesión</button>
   </aside>
 
   <main class="main">
     <header class="topbar">
-      <h1 id="view-title">Panel general</h1>
+      <div class="topbar-heading">
+        <span class="eyebrow">HOTEL MANAGER</span>
+        <h1 id="view-title">Panel general</h1>
+        <p id="view-description">Resumen de actividad y control del hotel.</p>
+      </div>
       <div class="topbar-user">
+        <span id="user-avatar" class="user-avatar" aria-hidden="true">—</span>
         <span id="user-name">—</span>
         <span id="user-email" class="muted"></span>
         <span id="user-role" class="role-pill">—</span>
@@ -117,6 +105,13 @@
           <button class="period-btn active" data-days="7">7 días</button>
           <button class="period-btn" data-days="30">30 días</button>
           <button class="period-btn" data-days="90">90 días</button>
+        </div>
+
+        <div class="quick-actions" aria-label="Accesos rápidos">
+          <button class="quick-action" data-go-view="habitaciones"><span class="quick-action-icon">01</span><span><strong>Ver habitaciones</strong><small>Disponibilidad y estado</small></span><span class="quick-arrow" aria-hidden="true">→</span></button>
+          <button class="quick-action" data-go-view="reservas"><span class="quick-action-icon">02</span><span><strong>Gestionar reservas</strong><small>Entradas y próximas estancias</small></span><span class="quick-arrow" aria-hidden="true">→</span></button>
+          <button class="quick-action" data-go-view="caja"><span class="quick-action-icon">03</span><span><strong>Revisar caja</strong><small>Turno y movimientos</small></span><span class="quick-arrow" aria-hidden="true">→</span></button>
+          <button class="quick-action" data-go-view="ventas"><span class="quick-action-icon">04</span><span><strong>Consultar ventas</strong><small>Actividad de ingresos</small></span><span class="quick-arrow" aria-hidden="true">→</span></button>
         </div>
 
         <div class="kpi-row">
@@ -604,7 +599,7 @@
 </div>
 
 <script src="js/api.js?v=5"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/app.js?v=6"></script>
 <script src="js/operations.js?v=1"></script>
 </body>
 </html>
