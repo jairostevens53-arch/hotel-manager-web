@@ -35,21 +35,32 @@ function showApp(user) {
   appShell.hidden = false;
   document.getElementById('user-name').textContent = user.name;
   document.getElementById('user-email').textContent = user.email || '';
-  document.getElementById('user-role').textContent = user.role === 'admin' ? 'Administrador' : 'Recepcionista';
+  document.getElementById('user-role').textContent = ({ admin: 'Administrador', recepcionista: 'Recepcionista', limpieza: 'Limpieza', mantenimiento: 'Mantenimiento' })[user.role] || user.role;
 
   const isAdmin = user.role === 'admin';
-  ['dashboard', 'habitaciones', 'estadias', 'tarifas', 'compras', 'turnos', 'categorias', 'ventas', 'gastos', 'usuarios'].forEach((v) => {
-    document.querySelector(`[data-view="${v}"]`).hidden = !isAdmin;
+  document.querySelectorAll('.nav-item[data-role]').forEach((item) => {
+    item.hidden = !item.dataset.role.split(',').includes(user.role);
   });
   document.getElementById('new-product-btn').hidden = !isAdmin;
+  document.getElementById('new-room-btn').hidden = !isAdmin;
+  document.getElementById('new-rate-btn').hidden = !isAdmin;
+  document.getElementById('new-category-btn').hidden = !isAdmin;
+  document.getElementById('new-user-btn').hidden = !isAdmin;
+  document.getElementById('new-supplier-btn').hidden = !isAdmin;
+  document.getElementById('new-purchase-btn').hidden = !isAdmin;
+  document.getElementById('new-guest-btn').hidden = !['admin', 'recepcionista'].includes(user.role);
+  document.getElementById('new-reservation-btn').hidden = !['admin', 'recepcionista'].includes(user.role);
+  document.getElementById('new-task-btn').hidden = !['admin', 'recepcionista'].includes(user.role);
+  document.getElementById('task-filter-type').hidden = !['admin', 'recepcionista'].includes(user.role);
+  const closedStayFilter = document.querySelector('#stay-filter-status option[value="finalizada"]');
+  if (closedStayFilter) closedStayFilter.hidden = !isAdmin;
 
   if (isAdmin) {
     showView('dashboard');
     loadDashboard();
     loadCategoriesIntoForm();
   } else {
-    // Los recepcionistas no tienen acceso al dashboard (la API lo restringe a admin): van directo al catálogo.
-    showView('catalogo');
+    showView(user.role === 'limpieza' || user.role === 'mantenimiento' ? 'tareas' : 'habitaciones');
   }
 }
 
@@ -108,6 +119,11 @@ function showView(viewName) {
   if (viewName === 'ventas') loadSales();
   if (viewName === 'gastos') loadExpenses();
   if (viewName === 'usuarios') loadUsers();
+  if (viewName === 'huespedes') loadGuests();
+  if (viewName === 'reservas') loadReservations();
+  if (viewName === 'tareas') loadTasks();
+  if (viewName === 'caja') loadCurrentShift();
+  if (viewName === 'inventario') { loadMovementProducts(); loadInventoryMovements(); }
 }
 
 document.querySelectorAll('.nav-item').forEach((btn) => {
@@ -146,9 +162,8 @@ async function loadDashboard() {
   }
 }
 
-function money(n) {
-  return `$${Number(n).toFixed(2)}`;
-}
+const currencyFormatter = new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' });
+function money(n) { return currencyFormatter.format(Number(n) || 0); }
 
 // Escapa texto antes de insertarlo con innerHTML (evita inyección de HTML/JS).
 function esc(value) {
@@ -189,10 +204,10 @@ function renderSalesByDayChart(salesByDay) {
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => `Ventas: ${money(item.parsed.y)}` } } },
       scales: {
         x: { ticks: { color: '#8d96ab' }, grid: { color: '#223156' } },
-        y: { ticks: { color: '#8d96ab' }, grid: { color: '#223156' }, beginAtZero: true },
+        y: { ticks: { color: '#8d96ab', callback: (value) => money(value) }, grid: { color: '#223156' }, beginAtZero: true },
       },
     },
   });
@@ -240,7 +255,7 @@ function renderOpenShifts(shifts) {
     return;
   }
   list.innerHTML = shifts
-    .map((s) => `<li><span>${esc(s.user.name)}</span><span class="muted">desde ${new Date(s.opened_at).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' })}</span></li>`)
+    .map((s) => `<li><span>${esc(s.user.name)}</span><span class="muted">desde ${new Date(s.opened_at).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit', timeZone: 'America/El_Salvador' })}</span></li>`)
     .join('');
 }
 
@@ -354,7 +369,7 @@ async function loadPurchases(page = 1) {
     tbody.innerHTML = purchases
       .map((p) => `
         <tr>
-          <td>${new Date(p.created_at).toLocaleDateString('es-SV')}</td>
+          <td>${new Date(p.created_at).toLocaleDateString('es-SV', { timeZone: 'America/El_Salvador' })}</td>
           <td>${p.supplier ? esc(p.supplier.name) : '—'}</td>
           <td>${p.items.length} producto(s)</td>
           <td>${money(p.total)}</td>
@@ -528,8 +543,8 @@ async function loadShifts(page = 1) {
       .map((s) => `
         <tr class="clickable-row" data-shift-id="${s.id}">
           <td>${esc(s.user.name)}</td>
-          <td>${new Date(s.opened_at).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' })}</td>
-          <td>${s.closed_at ? new Date(s.closed_at).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' }) : '<span class="status-badge status-active">Abierto</span>'}</td>
+          <td>${new Date(s.opened_at).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/El_Salvador' })}</td>
+          <td>${s.closed_at ? new Date(s.closed_at).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/El_Salvador' }) : '<span class="status-badge status-active">Abierto</span>'}</td>
           <td>${money(s.opening_amount)}</td>
           <td>${s.expected_amount !== null ? money(s.expected_amount) : '—'}</td>
           <td>${s.counted_amount !== null ? money(s.counted_amount) : '—'}</td>
@@ -589,7 +604,7 @@ function isAdmin() {
   const u = Api.getUser();
   return !!u && u.role === 'admin';
 }
-const fmtDate = (v) => new Date(v).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short' });
+const fmtDate = (v) => new Date(v).toLocaleString('es-SV', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/El_Salvador' });
 
 // ----- Productos: editar y eliminar -----
 let productsById = {};
@@ -877,7 +892,7 @@ function renderMethodsChart(byMethod) {
       labels,
       datasets: [{ data: labels.map((k) => byMethod[k]), backgroundColor: ['#f2994a', '#2dd4bf', '#8d96ab'], borderColor: '#0f1c38' }],
     },
-    options: { plugins: { legend: { position: 'bottom', labels: { color: '#8d96ab' } } } },
+    options: { plugins: { legend: { position: 'bottom', labels: { color: '#8d96ab' } }, tooltip: { callbacks: { label: (item) => `${item.label}: ${money(item.parsed)}` } } } },
   });
 }
 
@@ -1001,6 +1016,9 @@ function renderRoomSummary(summary) {
 function roomStatusButtons(r) {
   if (!r.active || r.status === 'ocupada') return '';
   const btn = (status, label) => `<button class="btn-secondary btn-small" data-room-status="${r.id}:${status}">${label}</button>`;
+  const role = Api.getUser()?.role;
+  if (role === 'limpieza') return r.status === 'limpieza' ? btn('disponible', 'Marcar lista') : '';
+  if (role === 'mantenimiento') return r.status === 'mantenimiento' ? btn('disponible', 'Marcar disponible') : '';
   if (r.status === 'limpieza') return btn('disponible', 'Marcar lista') + btn('mantenimiento', 'Mantenimiento');
   if (r.status === 'mantenimiento') return btn('disponible', 'Marcar disponible');
   return btn('mantenimiento', 'Mantenimiento'); // disponible
@@ -1039,7 +1057,7 @@ async function loadRooms() {
         <td>${esc(r.notes || '—')}</td>
         <td class="row-actions">
           ${roomStatusButtons(r)}
-          <button class="btn-secondary btn-small" data-edit-room="${r.id}">Editar</button>
+          ${isAdmin() ? `<button class="btn-secondary btn-small" data-edit-room="${r.id}">Editar</button>` : ''}
         </td>
       </tr>`;
     }).join('');
@@ -1132,7 +1150,7 @@ async function loadRates() {
         <td>${money(t.price)}</td>
         <td>${Number(t.extra_hour_price) > 0 ? money(t.extra_hour_price) : '—'}</td>
         <td><span class="status-badge ${t.active ? 'status-active' : 'status-inactive'}">${t.active ? 'Activa' : 'Inactiva'}</span></td>
-        <td class="row-actions"><button class="btn-secondary btn-small" data-edit-rate="${t.id}">Editar</button></td>
+        <td class="row-actions">${isAdmin() ? `<button class="btn-secondary btn-small" data-edit-rate="${t.id}">Editar</button>` : ''}</td>
       </tr>`).join('');
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="7" class="muted">Error: ${esc(err.message)}</td></tr>`;
@@ -1228,8 +1246,10 @@ document.getElementById('stay-filter-status').addEventListener('change', () => l
 async function showStayDetail(id) {
   const content = document.getElementById('stay-detail-content');
   const checkoutBtn = document.getElementById('stay-checkout-btn');
+  const extendBtn = document.getElementById('stay-extend-btn');
+  const chargeBtn = document.getElementById('stay-charge-btn');
   currentStayId = id;
-  checkoutBtn.hidden = true;
+  checkoutBtn.hidden = extendBtn.hidden = chargeBtn.hidden = true;
   content.innerHTML = '<p class="muted">Cargando…</p>';
   stayDetailModal.hidden = false;
   try {
@@ -1253,7 +1273,7 @@ async function showStayDetail(id) {
         ${sales.map((v) => `<li><span>Venta #${esc(v.id)} · ${esc(conceptLabel(v.concept))}${v.status === 'anulada' ? ' (anulada)' : ''}</span><span>${money(v.total)}</span></li>`).join('')}
         <li><strong>Total cobrado</strong><strong>${money(totalPaid)}</strong></li>
       </ul>`;
-    checkoutBtn.hidden = stay.status !== 'activa';
+    checkoutBtn.hidden = extendBtn.hidden = chargeBtn.hidden = stay.status !== 'activa';
   } catch (err) {
     content.innerHTML = `<p class="login-error">${esc(err.message)}</p>`;
   }

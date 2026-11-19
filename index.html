@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hotel Manager</title>
-<link rel="stylesheet" href="css/styles.css?v=4">
+<link rel="stylesheet" href="css/styles.css?v=5">
 <script src="js/chart.umd.min.js"></script>
 </head>
 <body>
@@ -45,51 +45,56 @@
       <div class="brand-mark">H</div>
       <span>Hotel Manager</span>
     </div>
-    <nav class="sidebar-nav">
-      <button class="nav-item active" data-view="dashboard">
+    <nav class="sidebar-nav" aria-label="Navegación principal">
+      <button class="nav-item active" data-view="dashboard" data-role="admin">
         <svg viewBox="0 0 24 24"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z"/></svg>
         Panel general
       </button>
-      <button class="nav-item" data-view="habitaciones">
+      <button class="nav-item" data-view="habitaciones" data-role="admin,recepcionista,limpieza,mantenimiento">
         <svg viewBox="0 0 24 24"><path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 12a1.5 1.5 0 1 0 0-.01"/></svg>
         Habitaciones
       </button>
-      <button class="nav-item" data-view="estadias">
+      <button class="nav-item" data-view="estadias" data-role="admin,recepcionista">
         <svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM4 10h16M8 3v4M16 3v4"/></svg>
         Estadías
       </button>
-      <button class="nav-item" data-view="tarifas">
+      <button class="nav-item" data-view="tarifas" data-role="admin,recepcionista">
         <svg viewBox="0 0 24 24"><path d="M3 12l9-9h9v9l-9 9zM16 8h.01"/></svg>
         Tarifas
       </button>
-      <button class="nav-item" data-view="catalogo">
+      <button class="nav-item" data-view="catalogo" data-role="admin,recepcionista">
         <svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM4 10h16v10H4z"/></svg>
         Catálogo
       </button>
-      <button class="nav-item" data-view="categorias">
+      <button class="nav-item" data-view="categorias" data-role="admin">
         <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
         Categorías
       </button>
-      <button class="nav-item" data-view="ventas">
+      <button class="nav-item" data-view="ventas" data-role="admin,recepcionista">
         <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg>
         Ventas
       </button>
-      <button class="nav-item" data-view="gastos">
+      <button class="nav-item" data-view="gastos" data-role="admin,recepcionista">
         <svg viewBox="0 0 24 24"><path d="M3 7h18v12H3zM3 11h18M7 15h3"/></svg>
         Gastos
       </button>
-      <button class="nav-item" data-view="compras">
+      <button class="nav-item" data-view="compras" data-role="admin">
         <svg viewBox="0 0 24 24"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L20 7H6"/></svg>
         Compras
       </button>
-      <button class="nav-item" data-view="turnos">
+      <button class="nav-item" data-view="turnos" data-role="admin">
         <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm1 5v5l4 2"/></svg>
         Auditoría de turnos
       </button>
-      <button class="nav-item" data-view="usuarios">
+      <button class="nav-item" data-view="usuarios" data-role="admin">
         <svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
         Usuarios
       </button>
+      <button class="nav-item" data-view="huespedes" data-role="admin,recepcionista">Huéspedes</button>
+      <button class="nav-item" data-view="reservas" data-role="admin,recepcionista">Reservas</button>
+      <button class="nav-item" data-view="tareas" data-role="admin,recepcionista,limpieza,mantenimiento">Tareas</button>
+      <button class="nav-item" data-view="caja" data-role="admin,recepcionista">Caja</button>
+      <button class="nav-item" data-view="inventario" data-role="admin">Movimientos</button>
     </nav>
     <button id="logout-btn" class="logout-btn">Cerrar sesión</button>
   </aside>
@@ -111,6 +116,7 @@
           <span>Periodo:</span>
           <button class="period-btn active" data-days="7">7 días</button>
           <button class="period-btn" data-days="30">30 días</button>
+          <button class="period-btn" data-days="90">90 días</button>
         </div>
 
         <div class="kpi-row">
@@ -191,12 +197,8 @@
       <!-- ===== VISTA: ESTADÍAS ===== -->
       <section id="view-estadias" class="view" hidden>
         <div class="catalogo-header">
-          <select id="stay-filter-status">
-            <option value="">Todas las estadías</option>
-            <option value="activa">Activas</option>
-            <option value="finalizada">Finalizadas</option>
-          </select>
-          <span class="muted">El check-in y los cobros se hacen desde el punto de venta, con el turno abierto.</span>
+          <div class="header-actions"><select id="stay-filter-status"><option value="">Todas las estadías</option><option value="activa">Activas</option><option value="finalizada">Finalizadas</option></select><button id="direct-checkin-btn" class="btn-primary">+ Check-in directo</button></div>
+          <span class="muted">Los cargos oficiales y consumos se registran contra el turno de caja abierto.</span>
         </div>
         <table class="data-table">
           <thead><tr><th>Habitación</th><th>Huésped</th><th>Tarifa</th><th>Ingreso</th><th>Salida</th><th>Estado</th></tr></thead>
@@ -336,9 +338,57 @@
         </table>
         <div id="shifts-pager" class="pager"></div>
       </section>
+
+      <section id="view-huespedes" class="view" hidden>
+        <div class="catalogo-header">
+          <input type="search" id="guest-search" placeholder="Buscar por nombre, documento, teléfono o correo" aria-label="Buscar huéspedes">
+          <button id="new-guest-btn" class="btn-primary">+ Nuevo huésped</button>
+        </div>
+        <table class="data-table"><thead><tr><th>Huésped</th><th>Documento</th><th>Teléfono</th><th>Correo</th><th></th></tr></thead><tbody id="guests-tbody"><tr><td colspan="5" class="muted">Busca o carga huéspedes.</td></tr></tbody></table>
+        <div id="guests-pager" class="pager"></div>
+      </section>
+
+      <section id="view-reservas" class="view" hidden>
+        <div class="catalogo-header">
+          <div class="header-actions"><select id="reservation-filter-status" aria-label="Filtrar reservas"><option value="">Todas las reservas</option><option value="confirmada">Confirmadas</option><option value="convertida">Convertidas</option><option value="cancelada">Canceladas</option></select><label class="filter-date"><span>Ingreso desde</span><input id="reservation-filter-from" type="date"></label><label class="filter-date"><span>Ingreso antes de</span><input id="reservation-filter-to" type="date"></label></div>
+          <button id="new-reservation-btn" class="btn-primary">+ Nueva reserva</button>
+        </div>
+        <table class="data-table"><thead><tr><th>Huésped</th><th>Habitación</th><th>Tarifa</th><th>Ingreso</th><th>Salida prevista</th><th>Estado</th><th></th></tr></thead><tbody id="reservations-tbody"><tr><td colspan="7" class="muted">Cargando…</td></tr></tbody></table>
+        <div id="reservations-pager" class="pager"></div>
+      </section>
+
+      <section id="view-tareas" class="view" hidden>
+        <div class="catalogo-header">
+          <div class="header-actions"><select id="task-filter-status" aria-label="Filtrar tareas"><option value="">Todos los estados</option><option value="pendiente">Pendientes</option><option value="asignada">Asignadas</option><option value="en_progreso">En progreso</option><option value="completada">Completadas</option><option value="cancelada">Canceladas</option></select><select id="task-filter-type" aria-label="Filtrar tipo"><option value="">Todos los tipos</option><option value="limpieza">Limpieza</option><option value="mantenimiento">Mantenimiento</option></select></div>
+          <button id="new-task-btn" class="btn-primary">+ Nueva tarea</button>
+        </div>
+        <table class="data-table"><thead><tr><th>Habitación</th><th>Tipo</th><th>Prioridad</th><th>Descripción</th><th>Asignado</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="tasks-tbody"><tr><td colspan="7" class="muted">Cargando…</td></tr></tbody></table>
+        <div id="tasks-pager" class="pager"></div>
+      </section>
+
+      <section id="view-caja" class="view" hidden>
+        <div class="panel" id="current-shift-panel" aria-live="polite"><p class="muted">Consultando turno actual…</p></div>
+        <div class="header-actions" style="margin-top:16px"><button id="open-shift-btn" class="btn-primary" hidden>Abrir turno</button><button id="close-shift-btn" class="btn-primary" hidden>Cerrar turno</button><button id="new-expense-btn" class="btn-secondary" hidden>Registrar gasto</button><button id="new-sale-btn" class="btn-secondary" hidden>Registrar venta de productos</button></div>
+      </section>
+
+      <section id="view-inventario" class="view" hidden>
+        <div class="catalogo-header"><div class="header-actions"><select id="movement-filter-product" aria-label="Filtrar por producto"><option value="">Todos los productos</option></select><select id="movement-filter-type" aria-label="Filtrar movimientos"><option value="">Todos los movimientos</option><option value="stock_inicial">Stock inicial</option><option value="ajuste">Ajustes</option><option value="entrada_compra">Compras</option><option value="salida_venta">Ventas</option><option value="entrada_anulacion">Anulaciones</option></select><input id="movement-filter-from" type="date" aria-label="Desde"><input id="movement-filter-to" type="date" aria-label="Hasta"></div></div>
+        <table class="data-table"><thead><tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th>Cantidad</th><th>Motivo</th><th>Usuario</th></tr></thead><tbody id="movements-tbody"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody></table>
+        <div id="movements-pager" class="pager"></div>
+      </section>
     </div>
   </main>
 </div>
+
+<!-- Formularios operativos conectados a la API -->
+<div id="guest-modal" class="modal-overlay" hidden><div class="modal"><h2 id="guest-modal-title">Nuevo huésped</h2><form id="guest-form"><label class="field"><span>Nombre</span><input id="gf-name" required maxlength="150"></label><label class="field"><span>Documento</span><input id="gf-document" maxlength="50"></label><label class="field"><span>Teléfono</span><input id="gf-phone" maxlength="40"></label><label class="field"><span>Correo</span><input id="gf-email" type="email" maxlength="150"></label><label class="field"><span>Notas</span><textarea id="gf-notes" maxlength="2000"></textarea></label><p id="guest-form-error" class="login-error" hidden></p><div class="modal-actions"><button type="button" class="btn-secondary" data-close-modal="guest-modal">Cancelar</button><button class="btn-primary">Guardar</button></div></form></div></div>
+<div id="reservation-modal" class="modal-overlay" hidden><div class="modal"><h2>Nueva reserva</h2><form id="reservation-form"><label class="field"><span>Huésped</span><select id="res-guest" required></select></label><label class="field"><span>Habitación disponible</span><select id="res-room" required></select></label><label class="field"><span>Tarifa</span><select id="res-rate" required></select></label><div class="field-row"><label class="field"><span>Ingreso · El Salvador</span><input id="res-checkin" type="datetime-local" required></label><label class="field"><span>Salida prevista · El Salvador</span><input id="res-checkout" type="datetime-local" required></label></div><label class="field"><span>Número de huéspedes</span><input id="res-guests" type="number" min="1" max="10" value="1"></label><label class="field"><span>Notas</span><textarea id="res-notes" maxlength="2000"></textarea></label><p id="reservation-form-error" class="login-error" hidden></p><div class="modal-actions"><button type="button" class="btn-secondary" data-close-modal="reservation-modal">Cancelar</button><button class="btn-primary">Crear reserva</button></div></form></div></div>
+<div id="task-modal" class="modal-overlay" hidden><div class="modal"><h2>Nueva tarea</h2><form id="task-form"><label class="field"><span>Habitación</span><select id="task-room" required></select></label><label class="field"><span>Tipo</span><select id="task-type" required><option value="limpieza">Limpieza</option><option value="mantenimiento">Mantenimiento</option></select></label><label class="field"><span>Prioridad</span><select id="task-priority"><option value="baja">Baja</option><option value="normal" selected>Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></label><label class="field"><span>Descripción</span><textarea id="task-description" maxlength="2000"></textarea></label><p id="task-form-error" class="login-error" hidden></p><div class="modal-actions"><button type="button" class="btn-secondary" data-close-modal="task-modal">Cancelar</button><button class="btn-primary">Crear tarea</button></div></form></div></div>
+<div id="cash-modal" class="modal-overlay" hidden><div class="modal"><h2 id="cash-modal-title"></h2><form id="cash-form"><label class="field"><span id="cash-amount-label">Monto</span><input id="cash-amount" type="number" min="0" step="0.01" required></label><label class="field" id="cash-description-row" hidden><span>Descripción</span><input id="cash-description" maxlength="200"></label><label class="field" id="cash-notes-row" hidden><span>Notas</span><textarea id="cash-notes" maxlength="500"></textarea></label><p id="cash-form-error" class="login-error" hidden></p><div class="modal-actions"><button type="button" class="btn-secondary" data-close-modal="cash-modal">Cancelar</button><button class="btn-primary" id="cash-submit">Guardar</button></div></form></div></div>
+<div id="sale-form-modal" class="modal-overlay" hidden><div class="modal modal-wide"><h2>Registrar venta de productos</h2><form id="sale-form"><label class="field"><span>Forma de pago</span><select id="sale-method"><option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option><option value="transferencia">Transferencia</option></select></label><div id="sale-lines"></div><button type="button" id="sale-add-line" class="btn-secondary btn-small">+ Agregar producto</button><p id="sale-form-error" class="login-error" hidden></p><div class="modal-actions"><button type="button" class="btn-secondary" data-close-modal="sale-form-modal">Cancelar</button><button class="btn-primary">Registrar venta</button></div></form></div></div>
+<div id="checkin-modal" class="modal-overlay" hidden><div class="modal"><h2>Registrar check-in</h2><form id="checkin-form"><label class="field"><span>Forma de pago del cargo inicial</span><select id="checkin-method"><option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option><option value="transferencia">Transferencia</option></select></label><p id="checkin-form-error" class="login-error" hidden></p><div class="modal-actions"><button type="button" class="btn-secondary" data-close-modal="checkin-modal">Cancelar</button><button class="btn-primary">Confirmar check-in</button></div></form></div></div>
+<div id="direct-checkin-modal" class="modal-overlay" hidden><div class="modal"><h2>Check-in directo</h2><form id="direct-checkin-form"><label class="field"><span>Huésped existente (opcional)</span><select id="direct-guest"><option value="">Registrar huésped nuevo</option></select></label><label class="field"><span>Nombre del huésped</span><input id="direct-guest-name" maxlength="150"></label><label class="field"><span>Documento</span><input id="direct-guest-document" maxlength="50"></label><div class="field-row"><label class="field"><span>Habitación</span><select id="direct-room" required></select></label><label class="field"><span>Tarifa</span><select id="direct-rate" required></select></label></div><label class="field"><span>Forma de pago inicial</span><select id="direct-method"><option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option><option value="transferencia">Transferencia</option></select></label><p id="direct-checkin-error" class="login-error" hidden></p><div class="modal-actions"><button type="button" class="btn-secondary" data-close-modal="direct-checkin-modal">Cancelar</button><button class="btn-primary">Registrar check-in</button></div></form></div></div>
+<div id="stay-charge-modal" class="modal-overlay" hidden><div class="modal"><h2 id="stay-charge-title">Operación de estadía</h2><form id="stay-charge-form"><label class="field" id="stay-hours-row"><span>Horas a extender</span><input id="stay-hours" type="number" min="1" max="12" value="1"></label><label class="field" id="stay-charge-amount-row" hidden><span>Monto del cargo</span><input id="stay-charge-amount" type="number" min="0.01" step="0.01"></label><label class="field" id="stay-charge-description-row" hidden><span>Descripción</span><input id="stay-charge-description" maxlength="200"></label><label class="field"><span>Forma de pago</span><select id="stay-operation-method"><option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option><option value="transferencia">Transferencia</option></select></label><p id="stay-charge-error" class="login-error" hidden></p><div class="modal-actions"><button type="button" class="btn-secondary" data-close-modal="stay-charge-modal">Cancelar</button><button class="btn-primary">Confirmar</button></div></form></div></div>
 
 <!-- ===== MODAL: HABITACIÓN ===== -->
 <div id="room-modal" class="modal-overlay" hidden>
@@ -398,6 +448,8 @@
     <h2 id="stay-detail-title">Detalle de la estadía</h2>
     <div id="stay-detail-content"></div>
     <div class="modal-actions">
+      <button type="button" id="stay-extend-btn" class="btn-secondary" hidden>Extender 1 hora</button>
+      <button type="button" id="stay-charge-btn" class="btn-secondary" hidden>Agregar cargo</button>
       <button type="button" id="stay-checkout-btn" class="btn-primary" hidden>Hacer check-out</button>
       <button type="button" id="stay-detail-close-btn" class="btn-secondary">Cerrar</button>
     </div>
@@ -551,7 +603,8 @@
   </div>
 </div>
 
-<script src="js/api.js?v=4"></script>
-<script src="js/app.js?v=4"></script>
+<script src="js/api.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
+<script src="js/operations.js?v=1"></script>
 </body>
 </html>

@@ -3,7 +3,8 @@
  * Cambia API_BASE si en el futuro la URL de Render cambia, o si
  * quieren apuntar a un entorno local (http://hotel-manager-api.test/api).
  */
-const API_BASE = 'https://hotel-manager-api-ttg7.onrender.com/api';
+// Configurable at runtime by setting window.HOTEL_API_BASE before loading this file.
+const API_BASE = (window.HOTEL_API_BASE || 'https://hotel-manager-api-ttg7.onrender.com/api').replace(/\/$/, '');
 
 const Api = {
   getToken() {
@@ -63,8 +64,12 @@ const Api = {
     }
 
     if (!response.ok) {
-      const message = (data && (data.message || Object.values(data.errors || {}).flat()[0])) || `Error ${response.status}`;
-      throw new Error(message);
+      const validation = data?.errors ? Object.values(data.errors).flat().join(' ') : '';
+      const fallback = ({ 403: 'No tienes permiso para realizar esta operación.', 422: 'Revisa los datos ingresados.', 429: 'Demasiados intentos. Espera un momento y vuelve a intentarlo.', 500: 'El servidor tuvo un problema. Intenta de nuevo más tarde.' })[response.status];
+      const error = new Error(data?.message || validation || fallback || `Error ${response.status}`);
+      error.status = response.status;
+      error.errors = data?.errors || {};
+      throw error;
     }
 
     return data;
@@ -141,6 +146,24 @@ const Api = {
   cancelSale(id) { return this.request(`/sales/${id}/cancel`, { method: 'POST' }); },
 
   expenses(page = 1) { return this.request(`/expenses?page=${page}`); },
+  createExpense(payload) { return this.request('/expenses', { method: 'POST', body: payload }); },
+  currentShift() { return this.request('/shifts/current'); },
+  openShift(payload) { return this.request('/shifts/open', { method: 'POST', body: payload }); },
+  closeShift(payload) { return this.request('/shifts/close', { method: 'POST', body: payload }); },
+  createSale(payload) { return this.request('/sales', { method: 'POST', body: payload }); },
+  guests(params = {}) { const qs = new URLSearchParams(params).toString(); return this.request(`/guests${qs ? `?${qs}` : ''}`); },
+  guest(id) { return this.request(`/guests/${id}`); },
+  createGuest(payload) { return this.request('/guests', { method: 'POST', body: payload }); },
+  updateGuest(id, payload) { return this.request(`/guests/${id}`, { method: 'PUT', body: payload }); },
+  reservations(params = {}) { const qs = new URLSearchParams(params).toString(); return this.request(`/reservations${qs ? `?${qs}` : ''}`); },
+  createReservation(payload) { return this.request('/reservations', { method: 'POST', body: payload }); },
+  cancelReservation(id) { return this.request(`/reservations/${id}/cancel`, { method: 'POST' }); },
+  checkInReservation(id, payload) { return this.request(`/reservations/${id}/check-in`, { method: 'POST', body: payload }); },
+  tasks(params = {}) { const qs = new URLSearchParams(params).toString(); return this.request(`/tasks${qs ? `?${qs}` : ''}`); },
+  createTask(payload) { return this.request('/tasks', { method: 'POST', body: payload }); },
+  assignTask(id, assigned_to) { return this.request(`/tasks/${id}/assign`, { method: 'PATCH', body: { assigned_to } }); },
+  updateTaskStatus(id, payload) { return this.request(`/tasks/${id}/status`, { method: 'PATCH', body: payload }); },
+  inventoryMovements(params = {}) { const qs = new URLSearchParams(params).toString(); return this.request(`/inventory/movements${qs ? `?${qs}` : ''}`); },
 
   // ----- Módulo de habitaciones -----
   // GET /rooms devuelve { summary, rooms }. only_active=0 incluye las fuera de servicio.
@@ -164,9 +187,12 @@ const Api = {
     const qs = new URLSearchParams(params).toString();
     return this.request(`/stays${qs ? `?${qs}` : ''}`);
   },
+  createStay(payload) { return this.request('/stays', { method: 'POST', body: payload }); },
   // GET /stays/{id} devuelve { stay, total_paid }.
   stay(id) { return this.request(`/stays/${id}`); },
   checkoutStay(id) { return this.request(`/stays/${id}/checkout`, { method: 'POST' }); },
+  extendStay(id, payload) { return this.request(`/stays/${id}/extend`, { method: 'POST', body: payload }); },
+  chargeStay(id, payload) { return this.request(`/stays/${id}/charge`, { method: 'POST', body: payload }); },
 
   users() { return this.request('/users'); },
   createUser(payload) { return this.request('/users', { method: 'POST', body: payload }); },
