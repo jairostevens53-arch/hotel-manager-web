@@ -939,7 +939,7 @@ async function loadUsers() {
       <tr>
         <td>${esc(u.name)}</td>
         <td>${esc(u.email)}</td>
-        <td>${u.role === 'admin' ? 'Administrador' : 'Recepcionista'}</td>
+        <td>${esc(({ admin: 'Administrador', recepcionista: 'Recepcionista', limpieza: 'Limpieza', mantenimiento: 'Mantenimiento' })[u.role] || u.role)}</td>
         <td><span class="status-badge ${u.active ? 'status-active' : 'status-inactive'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
         <td class="row-actions"><button class="btn-secondary btn-small" data-edit-user="${u.id}">Editar</button></td>
       </tr>`).join('');
