@@ -221,19 +221,19 @@ function renderSalesByDayChart(salesByDay) {
       datasets: [{
         label: 'Ventas',
         data: totals,
-        borderColor: '#f2994a',
-        backgroundColor: 'rgba(242, 153, 74, 0.12)',
+        borderColor: '#087E83',
+        backgroundColor: 'rgba(8, 126, 131, 0.12)',
         tension: 0.3,
         fill: true,
-        pointBackgroundColor: '#f2994a',
+        pointBackgroundColor: '#087E83',
       }],
     },
     options: {
       responsive: true,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => `Ventas: ${money(item.parsed.y)}` } } },
       scales: {
-        x: { ticks: { color: '#8d96ab' }, grid: { color: '#223156' } },
-        y: { ticks: { color: '#8d96ab', callback: (value) => money(value) }, grid: { color: '#223156' }, beginAtZero: true },
+        x: { ticks: { color: '#617481' }, grid: { color: '#D3E0E7' } },
+        y: { ticks: { color: '#617481', callback: (value) => money(value) }, grid: { color: '#D3E0E7' }, beginAtZero: true },
       },
     },
   });
@@ -249,15 +249,15 @@ function renderTopProductsChart(topProducts) {
     type: 'bar',
     data: {
       labels,
-      datasets: [{ label: 'Unidades vendidas', data: quantities, backgroundColor: '#2dd4bf' }],
+      datasets: [{ label: 'Unidades vendidas', data: quantities, backgroundColor: '#8B63D9' }],
     },
     options: {
       responsive: true,
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#8d96ab' }, grid: { color: '#223156' }, beginAtZero: true },
-        y: { ticks: { color: '#8d96ab' }, grid: { display: false } },
+        x: { ticks: { color: '#617481' }, grid: { color: '#D3E0E7' }, beginAtZero: true },
+        y: { ticks: { color: '#617481' }, grid: { display: false } },
       },
     },
   });
@@ -916,9 +916,9 @@ function renderMethodsChart(byMethod) {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data: labels.map((k) => byMethod[k]), backgroundColor: ['#f2994a', '#2dd4bf', '#8d96ab'], borderColor: '#0f1c38' }],
+      datasets: [{ data: labels.map((k) => byMethod[k]), backgroundColor: ['#087E83', '#8B63D9', '#93A4AD'], borderColor: '#FFFFFF' }],
     },
-    options: { plugins: { legend: { position: 'bottom', labels: { color: '#8d96ab' } }, tooltip: { callbacks: { label: (item) => `${item.label}: ${money(item.parsed)}` } } } },
+    options: { plugins: { legend: { position: 'bottom', labels: { color: '#617481' } }, tooltip: { callbacks: { label: (item) => `${item.label}: ${money(item.parsed)}` } } } },
   });
 }
 
