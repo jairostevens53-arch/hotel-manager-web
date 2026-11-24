@@ -11,6 +11,12 @@
   --text-muted: #617481;
   --border: #D3E0E7;
   --on-primary: #FFFFFF;
+  --chart-primary: #087E83;
+  --chart-accent: #8B63D9;
+  --chart-muted: #617481;
+  --chart-grid: #D3E0E7;
+  --chart-surface: #FFFFFF;
+  --chart-fill: rgba(8, 126, 131, .12);
   --radius: 10px;
   --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
@@ -420,6 +426,30 @@ textarea:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
   --focus-ring: rgba(8, 126, 131, .3);
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --navy-900: #10191F;
+  --navy-800: #1B292F;
+  --navy-700: #26383E;
+  --navy-600: #31474D;
+  --orange: #087F89;
+  --orange-dim: #06656D;
+  --teal: #7DE3E3;
+  --red: #FF8A80;
+  --text: #EAF5F5;
+  --text-muted: #B3C6C8;
+  --border: #34474D;
+  --on-primary: #FFFFFF;
+  --surface-raised: #26383E;
+  --focus-ring: rgba(125, 227, 227, .4);
+  --chart-primary: #087F89;
+  --chart-accent: #7DE3E3;
+  --chart-muted: #B3C6C8;
+  --chart-grid: #34474D;
+  --chart-surface: #1B292F;
+  --chart-fill: rgba(8, 127, 137, .2);
+}
+
 button, input, select { transition: border-color .18s ease, background-color .18s ease, color .18s ease, transform .18s ease; }
 button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid var(--teal);
@@ -558,6 +588,9 @@ button:not(:disabled):active { transform: translateY(1px); }
 #view-description { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; }
 .topbar-user { padding: 8px 11px 8px 8px; background: rgba(229, 242, 243, .8); border: 1px solid var(--border); border-radius: 12px; }
 .user-avatar { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: rgba(8, 126, 131, .12); color: var(--orange); font-size: 14px; font-weight: 700; }
+.theme-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; margin-left: 3px; padding: 0 9px; background: var(--navy-700); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.theme-toggle:hover { border-color: var(--orange); }
+.theme-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .topbar-user #user-name { font-weight: 600; }
 .view-content { padding: 26px 32px 40px; }
 .view { max-width: 1400px; margin: 0 auto; }
@@ -613,6 +646,19 @@ button:not(:disabled):active { transform: translateY(1px); }
 .about-module-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; }
 .about-module-list strong { color: var(--text); }
 .about-note { margin: 14px 2px 0; color: var(--text-muted); font-size: 11px; line-height: 1.6; }
+
+:root[data-theme="dark"] .topbar { background: rgba(16, 25, 31, .96); }
+:root[data-theme="dark"] .topbar-user { background: rgba(38, 56, 62, .82); }
+:root[data-theme="dark"] .user-avatar { background: rgba(125, 227, 227, .14); color: var(--teal); }
+:root[data-theme="dark"] .kpi-card:hover, :root[data-theme="dark"] .quick-action:hover { border-color: #527078; }
+:root[data-theme="dark"] .quick-action-icon, :root[data-theme="dark"] .about-number { background: rgba(125, 227, 227, .13); color: #7DE3E3; }
+:root[data-theme="dark"] .table-wrap { scrollbar-color: #527078 var(--navy-800); }
+:root[data-theme="dark"] .data-table th { background: rgba(38, 56, 62, .92); }
+:root[data-theme="dark"] .about-hero { background: linear-gradient(120deg, #26383E, #1B292F 88%); }
+:root[data-theme="dark"] .about-hero::after { border-color: rgba(125, 227, 227, .16); box-shadow: 0 0 0 28px rgba(125, 227, 227, .04), 0 0 0 58px rgba(139, 99, 217, .05); }
+:root[data-theme="dark"] .status-active, :root[data-theme="dark"] .status-busy { background: rgba(125, 227, 227, .14); color: #7DE3E3; }
+:root[data-theme="dark"] .status-info { background: rgba(174, 147, 235, .17); color: #C2AEF0; }
+:root[data-theme="dark"] .status-warn { background: rgba(242, 198, 109, .16); color: #F2C66D; }
 
 @media (max-width: 1100px) {
   .sidebar { width: 224px; }

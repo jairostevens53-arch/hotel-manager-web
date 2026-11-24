@@ -7,6 +7,35 @@ const loginSubmit = document.getElementById('login-submit');
 
 let charts = { salesDay: null, topProducts: null, methods: null };
 let currentDays = 7;
+let currentDashboardData = null;
+
+function setTheme(theme, persist = true) {
+  const dark = theme === 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const button = document.getElementById('theme-toggle');
+  if (button) {
+    const label = dark ? 'Día' : 'Noche';
+    const action = dark ? 'Activar tema claro' : 'Activar tema nocturno';
+    button.setAttribute('aria-label', action);
+    button.setAttribute('title', action);
+    button.setAttribute('aria-pressed', String(dark));
+    document.getElementById('theme-toggle-label').textContent = label;
+    document.getElementById('theme-toggle-icon').innerHTML = dark
+      ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>'
+      : '<path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8a8.6 8.6 0 1 0 11.6 11.6Z"/>';
+  }
+  if (persist) {
+    try { localStorage.setItem('hotel_theme', dark ? 'dark' : 'light'); } catch { /* tema se mantiene en esta sesión */ }
+  }
+  if (currentDashboardData && typeof Chart !== 'undefined') renderDashboardCharts(currentDashboardData);
+}
+
+let savedTheme = 'light';
+try { savedTheme = localStorage.getItem('hotel_theme') === 'dark' ? 'dark' : 'light'; } catch { /* usar tema claro si no hay almacenamiento */ }
+setTheme(savedTheme, false);
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+});
 
 // ===== Arranque =====
 init();
@@ -172,6 +201,7 @@ document.querySelectorAll('.period-btn').forEach((btn) => {
 async function loadDashboard() {
   try {
     const data = await Api.dashboard(currentDays);
+    currentDashboardData = data;
     renderKpis(data.totals);
     renderLowStock(data.low_stock);
     renderOpenShifts(data.open_shifts);
@@ -179,13 +209,21 @@ async function loadDashboard() {
       console.error('Chart.js no se cargó: revisa que exista js/chart.umd.min.js');
       return;
     }
-    renderSalesByDayChart(data.sales_by_day);
-    renderTopProductsChart(data.top_products);
-    renderMethodsChart(data.sales_by_method);
+    renderDashboardCharts(data);
   } catch (err) {
     document.getElementById('kpi-sales').textContent = '—';
     console.error('Error cargando el dashboard:', err.message);
   }
+}
+
+function renderDashboardCharts(data) {
+  renderSalesByDayChart(data.sales_by_day);
+  renderTopProductsChart(data.top_products);
+  renderMethodsChart(data.sales_by_method);
+}
+
+function themeColor(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
 const currencyFormatter = new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' });
@@ -221,19 +259,19 @@ function renderSalesByDayChart(salesByDay) {
       datasets: [{
         label: 'Ventas',
         data: totals,
-        borderColor: '#087E83',
-        backgroundColor: 'rgba(8, 126, 131, 0.12)',
+        borderColor: themeColor('--chart-primary'),
+        backgroundColor: themeColor('--chart-fill'),
         tension: 0.3,
         fill: true,
-        pointBackgroundColor: '#087E83',
+        pointBackgroundColor: themeColor('--chart-primary'),
       }],
     },
     options: {
       responsive: true,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => `Ventas: ${money(item.parsed.y)}` } } },
       scales: {
-        x: { ticks: { color: '#617481' }, grid: { color: '#D3E0E7' } },
-        y: { ticks: { color: '#617481', callback: (value) => money(value) }, grid: { color: '#D3E0E7' }, beginAtZero: true },
+        x: { ticks: { color: themeColor('--chart-muted') }, grid: { color: themeColor('--chart-grid') } },
+        y: { ticks: { color: themeColor('--chart-muted'), callback: (value) => money(value) }, grid: { color: themeColor('--chart-grid') }, beginAtZero: true },
       },
     },
   });
@@ -249,15 +287,15 @@ function renderTopProductsChart(topProducts) {
     type: 'bar',
     data: {
       labels,
-      datasets: [{ label: 'Unidades vendidas', data: quantities, backgroundColor: '#8B63D9' }],
+      datasets: [{ label: 'Unidades vendidas', data: quantities, backgroundColor: themeColor('--chart-accent') }],
     },
     options: {
       responsive: true,
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#617481' }, grid: { color: '#D3E0E7' }, beginAtZero: true },
-        y: { ticks: { color: '#617481' }, grid: { display: false } },
+        x: { ticks: { color: themeColor('--chart-muted') }, grid: { color: themeColor('--chart-grid') }, beginAtZero: true },
+        y: { ticks: { color: themeColor('--chart-muted') }, grid: { display: false } },
       },
     },
   });
@@ -916,9 +954,9 @@ function renderMethodsChart(byMethod) {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data: labels.map((k) => byMethod[k]), backgroundColor: ['#087E83', '#8B63D9', '#93A4AD'], borderColor: '#FFFFFF' }],
+      datasets: [{ data: labels.map((k) => byMethod[k]), backgroundColor: [themeColor('--chart-primary'), themeColor('--chart-accent'), themeColor('--chart-muted')], borderColor: themeColor('--chart-surface') }],
     },
-    options: { plugins: { legend: { position: 'bottom', labels: { color: '#617481' } }, tooltip: { callbacks: { label: (item) => `${item.label}: ${money(item.parsed)}` } } } },
+    options: { plugins: { legend: { position: 'bottom', labels: { color: themeColor('--chart-muted') } }, tooltip: { callbacks: { label: (item) => `${item.label}: ${money(item.parsed)}` } } } },
   });
 }
 

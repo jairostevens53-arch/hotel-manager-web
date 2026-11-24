@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hotel Manager</title>
 <link rel="icon" type="image/png" href="assets/hotel-logo.png">
-<link rel="stylesheet" href="css/styles.css?v=8">
+<link rel="stylesheet" href="css/styles.css?v=9">
 <script src="js/chart.umd.min.js"></script>
 </head>
 <body>
@@ -99,6 +99,10 @@
         <span id="user-name">—</span>
         <span id="user-email" class="muted"></span>
         <span id="user-role" class="role-pill">—</span>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Activar tema nocturno" aria-pressed="false" title="Activar tema nocturno">
+          <svg id="theme-toggle-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8a8.6 8.6 0 1 0 11.6 11.6Z"/></svg>
+          <span id="theme-toggle-label">Noche</span>
+        </button>
       </div>
     </header>
 
@@ -629,7 +633,7 @@
 </div>
 
 <script src="js/api.js?v=5"></script>
-<script src="js/app.js?v=9"></script>
+<script src="js/app.js?v=10"></script>
 <script src="js/operations.js?v=1"></script>
 </body>
 </html>
