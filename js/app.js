@@ -123,7 +123,7 @@ function showView(viewName) {
     dashboard: 'Resumen de actividad y control del hotel.', habitaciones: 'Consulta disponibilidad, ocupación y tareas por habitación.', estadias: 'Entradas activas, cargos y salidas de huéspedes.',
     tarifas: 'Precios vigentes para reservas y estadías.', catalogo: 'Productos, precios y existencias actuales.', categorias: 'Organiza los productos del hotel.', ventas: 'Ventas registradas desde caja y estadías.', gastos: 'Gastos operativos registrados en los turnos.',
     compras: 'Compras de inventario y proveedores.', turnos: 'Revisa cierres, montos esperados y diferencias.', usuarios: 'Cuentas del equipo y niveles de acceso.', huespedes: 'Busca y actualiza la información de los huéspedes.',
-    reservas: 'Programa ingresos y confirma el check-in.', tareas: 'Asigna y actualiza tareas de limpieza y mantenimiento.', caja: 'Abre el turno, registra operaciones y concilia el efectivo.', inventario: 'Trazabilidad de entradas, salidas y ajustes de stock.',
+    reservas: 'Programa ingresos y confirma el check-in.', tareas: 'Asigna y actualiza tareas de limpieza y mantenimiento.', caja: 'Abre el turno, registra operaciones y concilia el efectivo.', inventario: 'Trazabilidad de entradas, salidas y ajustes de stock.', acerca: 'Guía de funcionamiento, módulos y permisos del panel.',
   };
   document.getElementById('view-description').textContent = descriptions[viewName] || '';
   document.getElementById('mobile-nav').value = viewName;

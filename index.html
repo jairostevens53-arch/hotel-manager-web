@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hotel Manager</title>
-<link rel="stylesheet" href="css/styles.css?v=6">
+<link rel="stylesheet" href="css/styles.css?v=7">
 <script src="js/chart.umd.min.js"></script>
 </head>
 <body>
@@ -77,6 +77,10 @@
         <span class="nav-group-title">Configuración</span>
         <button class="nav-item" data-view="tarifas" data-role="admin,recepcionista"><svg viewBox="0 0 24 24"><path d="M3 12l9-9h9v9l-9 9zM16 8h.01"/></svg>Tarifas</button>
         <button class="nav-item" data-view="usuarios" data-role="admin"><svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Usuarios</button>
+      </div>
+      <div class="nav-group" data-nav-group>
+        <span class="nav-group-title">Ayuda</span>
+        <button class="nav-item" data-view="acerca" data-role="admin,recepcionista,limpieza,mantenimiento"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.3-1.8 3M12 17.5h.01"/></svg>Acerca de</button>
       </div>
     </nav>
     <button id="logout-btn" class="logout-btn">Cerrar sesión</button>
@@ -371,6 +375,31 @@
         <table class="data-table"><thead><tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th>Cantidad</th><th>Motivo</th><th>Usuario</th></tr></thead><tbody id="movements-tbody"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody></table>
         <div id="movements-pager" class="pager"></div>
       </section>
+
+      <!-- ===== VISTA: ACERCA DE ===== -->
+      <section id="view-acerca" class="view" hidden>
+        <div class="about-hero panel">
+          <span class="about-kicker">GUÍA RÁPIDA</span>
+          <h2>Todo el trabajo del hotel, en un solo lugar</h2>
+          <p>Hotel Manager conecta la recepción con la operación diaria. La información se organiza por módulos y las opciones disponibles dependen del rol de cada persona.</p>
+        </div>
+        <div class="about-section-heading"><div><span class="about-kicker">CÓMO FUNCIONA</span><h2>Flujo de trabajo</h2></div><p>Un recorrido sencillo desde la llegada del huésped hasta el cierre de caja.</p></div>
+        <div class="about-steps">
+          <article class="about-card"><span class="about-number">01</span><h3>Organiza la estadía</h3><p>Consulta habitaciones y tarifas; registra huéspedes, reservas o una llegada directa.</p></article>
+          <article class="about-card"><span class="about-number">02</span><h3>Da seguimiento</h3><p>Gestiona el check-in, cargos durante la estadía y la salida del huésped.</p></article>
+          <article class="about-card"><span class="about-number">03</span><h3>Coordina tareas</h3><p>Asigna limpieza o mantenimiento por habitación y actualiza su avance hasta completarla.</p></article>
+          <article class="about-card"><span class="about-number">04</span><h3>Registra movimientos</h3><p>Controla caja, ventas, gastos y compras para mantener la operación al día.</p></article>
+        </div>
+        <div class="about-section-heading"><div><span class="about-kicker">ACCESOS POR PERFIL</span><h2>¿Qué puede hacer cada rol?</h2></div><p>Cada cuenta ve únicamente las secciones habilitadas para sus responsabilidades.</p></div>
+        <div class="about-roles">
+          <article class="about-card"><span class="role-pill">Administrador</span><h3>Control general</h3><p>Administra usuarios, configuración, inventario y finanzas; también supervisa la operación y los reportes.</p></article>
+          <article class="about-card"><span class="role-pill">Recepcionista</span><h3>Atención y recepción</h3><p>Gestiona huéspedes, reservas, habitaciones, estadías, tareas y las operaciones de caja autorizadas.</p></article>
+          <article class="about-card"><span class="role-pill">Limpieza</span><h3>Preparación de habitaciones</h3><p>Consulta las habitaciones y trabaja en las tareas de limpieza que le han asignado.</p></article>
+          <article class="about-card"><span class="role-pill">Mantenimiento</span><h3>Cuidado de instalaciones</h3><p>Consulta las habitaciones y actualiza las tareas de mantenimiento que le han asignado.</p></article>
+        </div>
+        <div class="about-modules panel"><div><span class="about-kicker">MÓDULOS PRINCIPALES</span><h2>Encuentra cada función</h2></div><div class="about-module-list"><p><strong>Operación:</strong> habitaciones, estadías, reservas, huéspedes, tareas y caja.</p><p><strong>Inventario:</strong> productos, categorías, compras, proveedores y movimientos.</p><p><strong>Finanzas:</strong> ventas, gastos y auditoría de turnos.</p><p><strong>Configuración:</strong> tarifas y usuarios.</p></div></div>
+        <p class="about-note">Los cambios se guardan en el sistema al confirmar cada acción. Si una opción no aparece, puede que tu rol no tenga acceso a ese módulo.</p>
+      </section>
     </div>
   </main>
 </div>
@@ -599,7 +628,7 @@
 </div>
 
 <script src="js/api.js?v=5"></script>
-<script src="js/app.js?v=6"></script>
+<script src="js/app.js?v=7"></script>
 <script src="js/operations.js?v=1"></script>
 </body>
 </html>

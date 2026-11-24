@@ -593,10 +593,32 @@ button:not(:disabled):active { transform: translateY(1px); }
 .pager { padding: 10px 2px 0; }
 .view > .panel { margin-bottom: 12px; }
 
+/* ===== GUÍA ACERCA DE ===== */
+.about-hero { position: relative; overflow: hidden; padding: 30px; background: linear-gradient(120deg, rgba(20, 39, 75, .98), rgba(14, 27, 53, .96)); }
+.about-hero::after { position: absolute; top: -70px; right: -25px; width: 260px; height: 260px; border: 1px solid rgba(45, 212, 191, .13); border-radius: 50%; box-shadow: 0 0 0 28px rgba(45, 212, 191, .035), 0 0 0 58px rgba(45, 212, 191, .025); content: ''; pointer-events: none; }
+.about-kicker { color: var(--teal); font-size: 10px; font-weight: 700; letter-spacing: 1.35px; }
+.about-hero h2 { margin: 8px 0; color: var(--text); font-size: clamp(22px, 3vw, 30px); }
+.about-hero p { max-width: 720px; margin: 0; color: var(--text-muted); line-height: 1.7; }
+.about-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 28px 0 13px; }
+.about-section-heading h2, .about-modules h2 { margin: 5px 0 0; font-size: 18px; }
+.about-section-heading > p { max-width: 430px; margin: 0 0 2px; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+.about-steps, .about-roles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.about-card { min-width: 0; padding: 17px; background: var(--navy-800); border: 1px solid var(--border); border-radius: var(--radius); }
+.about-number { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; background: rgba(242, 153, 74, .13); color: var(--orange); font-size: 10px; font-weight: 700; }
+.about-card h3 { margin: 14px 0 6px; font-size: 14px; }
+.about-card p, .about-module-list p { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.65; }
+.about-card .role-pill { display: inline-flex; min-height: 25px; align-items: center; }
+.about-roles .about-card h3 { margin-top: 12px; }
+.about-modules { display: grid; grid-template-columns: minmax(180px, .7fr) 1.3fr; gap: 18px; align-items: start; margin-top: 16px; }
+.about-module-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; }
+.about-module-list strong { color: var(--text); }
+.about-note { margin: 14px 2px 0; color: var(--text-muted); font-size: 11px; line-height: 1.6; }
+
 @media (max-width: 1100px) {
   .sidebar { width: 224px; }
   .topbar, .view-content { padding-left: 22px; padding-right: 22px; }
   .quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .about-steps, .about-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 860px) {
@@ -632,6 +654,10 @@ button:not(:disabled):active { transform: translateY(1px); }
   .quick-arrow { display: none; }
   .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .panel-grid { grid-template-columns: 1fr; }
+  .about-hero { padding: 22px 18px; }
+  .about-section-heading { display: block; margin-top: 23px; }
+  .about-section-heading > p { margin-top: 7px; }
+  .about-steps, .about-roles, .about-modules, .about-module-list { grid-template-columns: 1fr; }
   .panel-wide { grid-column: auto; }
   .catalogo-header { align-items: stretch; }
   .filter-date { justify-content: space-between; }
