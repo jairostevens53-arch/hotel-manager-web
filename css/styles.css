@@ -591,6 +591,9 @@ button:not(:disabled):active { transform: translateY(1px); }
 .theme-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; margin-left: 3px; padding: 0 9px; background: var(--navy-700); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .theme-toggle:hover { border-color: var(--orange); }
 .theme-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.refresh-button { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; margin-left: 3px; padding: 0; background: var(--navy-700); border: 1px solid var(--border); border-radius: 8px; color: var(--text); cursor: pointer; }
+.refresh-button:hover { border-color: var(--teal); color: var(--teal); }
+.refresh-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .topbar-user #user-name { font-weight: 600; }
 .view-content { padding: 26px 32px 40px; }
 .view { max-width: 1400px; margin: 0 auto; }

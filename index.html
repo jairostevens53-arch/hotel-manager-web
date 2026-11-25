@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hotel Manager</title>
 <link rel="icon" type="image/png" href="assets/hotel-logo.png">
-<link rel="stylesheet" href="css/styles.css?v=10">
+<link rel="stylesheet" href="css/styles.css?v=11">
 <script src="js/chart.umd.min.js"></script>
 </head>
 <body>
@@ -99,6 +99,9 @@
         <span id="user-name">—</span>
         <span id="user-email" class="muted"></span>
         <span id="user-role" class="role-pill">—</span>
+        <button id="refresh-panel" class="refresh-button" type="button" aria-label="Actualizar datos del panel" title="Actualizar datos del panel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4.8 9a7.5 7.5 0 0 1 12.7-2L20 12M4 17v-5h5m10.2 3a7.5 7.5 0 0 1-12.7 2L4 12"/></svg>
+        </button>
         <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Activar tema nocturno" aria-pressed="false" title="Activar tema nocturno">
           <svg id="theme-toggle-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8a8.6 8.6 0 1 0 11.6 11.6Z"/></svg>
           <span id="theme-toggle-label">Noche</span>
@@ -637,7 +640,7 @@
 </div>
 
 <script src="js/api.js?v=6"></script>
-<script src="js/app.js?v=11"></script>
+<script src="js/app.js?v=12"></script>
 <script src="js/operations.js?v=2"></script>
 </body>
 </html>

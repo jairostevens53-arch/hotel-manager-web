@@ -36,6 +36,7 @@ setTheme(savedTheme, false);
 document.getElementById('theme-toggle').addEventListener('click', () => {
   setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
 });
+document.getElementById('refresh-panel').addEventListener('click', () => window.location.reload());
 
 // ===== Arranque =====
 init();
