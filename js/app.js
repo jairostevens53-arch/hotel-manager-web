@@ -1195,29 +1195,62 @@ let editingRateId = null;
 const rateModal = document.getElementById('rate-modal');
 const rateForm = document.getElementById('rate-form');
 const rateFormError = document.getElementById('rate-form-error');
+const rateBedsSelect = document.getElementById('tf-beds');
+
+function rateDefinitionIsValid(rate) {
+  const beds = Number(rate.beds);
+  return (rate.room_type === 'estandar' && beds === 1)
+    || (rate.room_type === 'especial' && Number.isInteger(beds) && beds >= 1 && beds <= 4);
+}
+
+function updateRateFormControls(clearActive = false) {
+  const type = document.getElementById('tf-room-type').value;
+  if (type === 'estandar') {
+    rateBedsSelect.value = '1';
+    rateBedsSelect.disabled = true;
+  } else if (type === 'especial') {
+    rateBedsSelect.disabled = false;
+    if (rateForm.dataset.resetBeds === 'true') rateBedsSelect.value = '';
+  } else {
+    rateBedsSelect.value = '';
+    rateBedsSelect.disabled = true;
+  }
+  rateForm.dataset.resetBeds = 'false';
+  const definitionValid = rateDefinitionIsValid({ room_type: type, beds: rateBedsSelect.value });
+  const active = document.getElementById('tf-active');
+  if (clearActive || !definitionValid) active.checked = false;
+  active.disabled = !definitionValid;
+}
 
 async function loadRates() {
   const tbody = document.getElementById('rates-tbody');
-  tbody.innerHTML = '<tr><td colspan="7" class="muted">Cargando…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="muted">Cargando…</td></tr>';
   try {
     const rates = listOf(await Api.rates({ only_active: 0 }));
     ratesById = Object.fromEntries(rates.map((t) => [t.id, t]));
+    const legacyCount = rates.filter((rate) => !rateDefinitionIsValid(rate)).length;
+    const legacyAlert = document.getElementById('rates-legacy-alert');
+    legacyAlert.hidden = !legacyCount;
+    legacyAlert.textContent = legacyCount
+      ? `${legacyCount} tarifa${legacyCount === 1 ? '' : 's'} necesita${legacyCount === 1 ? '' : 'n'} tipo y camas exactos. Usa “Corregir” para completar los datos; las tarifas incompletas no se ofrecerán en reservas ni estadías.`
+      : '';
     if (!rates.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="muted">Aún no hay tarifas. Crea la primera con "+ Nueva tarifa".</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="muted">Aún no hay tarifas. Crea la primera con "+ Nueva tarifa".</td></tr>';
       return;
     }
     tbody.innerHTML = rates.map((t) => `
       <tr>
         <td>${esc(t.name)}</td>
-        <td>${esc(roomTypeLabel(t.room_type))}</td>
+        <td>${esc(ROOM_TYPE[t.room_type] || 'Sin asignar')}</td>
+        <td>${Number.isInteger(Number(t.beds)) && Number(t.beds) > 0 ? `${esc(t.beds)} ${Number(t.beds) === 1 ? 'cama' : 'camas'}` : '<span class="status-badge status-warn">Sin asignar</span>'}</td>
         <td>${esc(t.hours)} h</td>
         <td>${money(t.price)}</td>
         <td>${Number(t.extra_hour_price) > 0 ? money(t.extra_hour_price) : '—'}</td>
-        <td><span class="status-badge ${t.active ? 'status-active' : 'status-inactive'}">${t.active ? 'Activa' : 'Inactiva'}</span></td>
-        <td class="row-actions">${isAdmin() ? `<button class="btn-secondary btn-small" data-edit-rate="${t.id}">Editar</button>` : ''}</td>
+        <td><span class="status-badge ${rateDefinitionIsValid(t) ? (t.active ? 'status-active' : 'status-inactive') : 'status-warn'}">${rateDefinitionIsValid(t) ? (t.active ? 'Activa' : 'Inactiva') : `${t.active ? 'Activa · ' : 'Inactiva · '}corregir datos`}</span></td>
+        <td class="row-actions">${isAdmin() ? `<button class="btn-secondary btn-small" data-edit-rate="${t.id}">${rateDefinitionIsValid(t) ? 'Editar' : 'Corregir'}</button>` : ''}</td>
       </tr>`).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="muted">Error: ${esc(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="muted">Error: ${esc(err.message)}</td></tr>`;
   }
 }
 
@@ -1225,19 +1258,26 @@ function openRateModal(rate = null) {
   editingRateId = rate ? rate.id : null;
   rateForm.reset();
   rateFormError.hidden = true;
-  document.getElementById('rate-modal-title').textContent = rate ? 'Editar tarifa' : 'Nueva tarifa';
-  // Al crear, la API siempre la deja activa.
-  document.getElementById('tf-active-row').hidden = !rate;
+  document.getElementById('rate-modal-title').textContent = rate ? (rateDefinitionIsValid(rate) ? 'Editar tarifa' : 'Corregir tarifa') : 'Nueva tarifa';
   if (rate) {
     document.getElementById('tf-name').value = rate.name;
     document.getElementById('tf-hours').value = rate.hours;
-    document.getElementById('tf-room-type').value = rate.room_type || '';
+    document.getElementById('tf-room-type').value = ['estandar', 'especial'].includes(rate.room_type) ? rate.room_type : '';
+    rateBedsSelect.value = Number(rate.beds) >= 1 && Number(rate.beds) <= 4 ? String(rate.beds) : '';
     document.getElementById('tf-price').value = rate.price;
     document.getElementById('tf-extra').value = rate.extra_hour_price ?? 0;
-    document.getElementById('tf-active').checked = !!rate.active;
+    document.getElementById('tf-active').checked = rateDefinitionIsValid(rate) && !!rate.active;
   }
+  rateForm.dataset.resetBeds = 'false';
+  updateRateFormControls();
   rateModal.hidden = false;
 }
+
+document.getElementById('tf-room-type').addEventListener('change', () => {
+  rateForm.dataset.resetBeds = 'true';
+  updateRateFormControls(true);
+});
+rateBedsSelect.addEventListener('change', () => updateRateFormControls(true));
 
 document.getElementById('new-rate-btn').addEventListener('click', () => openRateModal());
 document.getElementById('rate-cancel-btn').addEventListener('click', () => { rateModal.hidden = true; });
@@ -1250,14 +1290,24 @@ document.getElementById('rates-tbody').addEventListener('click', (e) => {
 rateForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   rateFormError.hidden = true;
+  const roomType = document.getElementById('tf-room-type').value;
+  const beds = Number(rateBedsSelect.value);
+  if (!rateDefinitionIsValid({ room_type: roomType, beds })) {
+    rateFormError.textContent = roomType === 'estandar'
+      ? 'Una tarifa estándar debe tener exactamente 1 cama.'
+      : 'Selecciona el tipo de habitación y una cantidad de camas válida (1 a 4).';
+    rateFormError.hidden = false;
+    return;
+  }
   const payload = {
     name: document.getElementById('tf-name').value.trim(),
     hours: Number(document.getElementById('tf-hours').value),
-    room_type: document.getElementById('tf-room-type').value || null,
+    room_type: roomType,
+    beds,
     price: Number(document.getElementById('tf-price').value),
     extra_hour_price: Number(document.getElementById('tf-extra').value),
+    active: document.getElementById('tf-active').checked,
   };
-  if (editingRateId) payload.active = document.getElementById('tf-active').checked;
   try {
     await (editingRateId ? Api.updateRate(editingRateId, payload) : Api.createRate(payload));
     rateModal.hidden = true;

@@ -66,7 +66,10 @@ const Api = {
     if (!response.ok) {
       const validation = data?.errors ? Object.values(data.errors).flat().join(' ') : '';
       const fallback = ({ 403: 'No tienes permiso para realizar esta operación.', 422: 'Revisa los datos ingresados.', 429: 'Demasiados intentos. Espera un momento y vuelve a intentarlo.', 500: 'El servidor tuvo un problema. Intenta de nuevo más tarde.' })[response.status];
-      const error = new Error(data?.message || validation || fallback || `Error ${response.status}`);
+      const message = response.status === 422 && validation
+        ? validation
+        : (data?.message || validation || fallback || `Error ${response.status}`);
+      const error = new Error(message);
       error.status = response.status;
       error.errors = data?.errors || {};
       throw error;

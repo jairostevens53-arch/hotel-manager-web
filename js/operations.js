@@ -6,7 +6,7 @@ const opDate = (v) => v ? new Date(v).toLocaleString('es-SV', { dateStyle: 'shor
 const elSalvadorDateInput = (value) => new Date(`${value}:00-06:00`).toISOString();
 const opStatus = (s) => `<span class="status-badge ${['confirmada','activa','completada','asignada','en_progreso'].includes(s) ? 'status-active' : 'status-inactive'}">${esc(s || '—')}</span>`;
 let guestPage = 1, guestQuery = '', editingGuest = null, reservationPage = 1, taskPage = 1, movementPage = 1;
-let guestRecords = [], reservationRecords = [], taskRecords = [], taskAssignees = [], taskRooms = [], reservationRooms = [], reservationRates = [], directRooms = [], directRates = [], currentShift = null, saleProducts = [], checkInReservationId = null;
+let guestRecords = [], reservationRecords = [], taskRecords = [], taskAssignees = [], taskRooms = [], reservationRooms = [], directRooms = [], currentShift = null, saleProducts = [], checkInReservationId = null;
 const opsSearchDebounce = (fn) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), 250); }; };
 
 async function loadGuests(page = 1) {
@@ -27,10 +27,32 @@ function openGuest(guest = null) {
   op('guest-modal').hidden = false; op('gf-name').focus();
 }
 
-function fillRatesForRoom(roomSelectId, rateSelectId, rooms, rates) {
+async function fillRatesForRoom(roomSelectId, rateSelectId, rooms, errorId) {
+  const select = op(rateSelectId);
+  const error = errorId ? op(errorId) : null;
+  if (error) { error.hidden = true; error.textContent = ''; }
+  select.disabled = true;
+  select.innerHTML = '<option value="">Selecciona una habitación para cargar tarifas</option>';
   const room = rooms.find((r) => String(r.id) === op(roomSelectId).value);
-  const applicable = rates.filter((r) => !r.room_type || r.room_type === room?.type);
-  op(rateSelectId).innerHTML = applicable.map((r) => `<option value="${r.id}">${esc(r.name)} · ${money(r.price)}</option>`).join('');
+  if (!room) { select.disabled = false; return; }
+
+  const beds = room.type === 'estandar' ? 1 : Number(room.beds);
+  select.innerHTML = '<option value="">Cargando tarifas compatibles…</option>';
+  try {
+    const rates = opList(await Api.rates({ room_type: room.type, beds }));
+    const applicable = rates.filter((r) => r.room_type === room.type && Number(r.beds) === beds && r.active !== false);
+    select.innerHTML = '<option value="">Selecciona una tarifa…</option>' + applicable.map((r) => `<option value="${r.id}">${esc(r.name)} · ${esc(r.hours)} h · ${money(r.price)} · extra ${money(r.extra_hour_price)}</option>`).join('');
+    if (!applicable.length && error) {
+      const roomDescription = room.type === 'estandar' ? 'estándar de 1 cama' : `especial de ${beds} ${beds === 1 ? 'cama' : 'camas'}`;
+      error.textContent = `No existe una tarifa activa exacta para habitación ${roomDescription}. Configura una en Tarifas antes de continuar.`;
+      error.hidden = false;
+    }
+  } catch (e) {
+    select.innerHTML = '<option value="">No se pudieron cargar las tarifas</option>';
+    if (error) opError(errorId, e);
+  } finally {
+    select.disabled = false;
+  }
 }
 op('new-guest-btn').addEventListener('click', () => openGuest());
 op('guests-tbody').addEventListener('click', (e) => { const b = e.target.closest('[data-edit-guest]'); if (b) openGuest(guestRecords.find((g) => String(g.id) === b.dataset.editGuest)); });
@@ -59,20 +81,23 @@ async function openReservationForm() {
   op('reservation-form').reset(); op('reservation-form-error').hidden = true;
   op('reservation-modal').hidden = false;
   try {
-    const [guests, roomsResult, rates] = await Promise.all([Api.guests({ per_page: 100 }), Api.rooms(), Api.rates()]);
+    const [guests, roomsResult] = await Promise.all([Api.guests({ per_page: 100 }), Api.rooms()]);
     const rooms = roomsResult.rooms || [];
-    reservationRooms = rooms.filter((r) => r.active && r.status === 'disponible'); reservationRates = rates;
+    reservationRooms = rooms.filter((r) => r.active && r.status === 'disponible');
     op('res-guest').innerHTML = opList(guests).map((g) => `<option value="${g.id}">${esc(g.name)}${g.document ? ` · ${esc(g.document)}` : ''}</option>`).join('');
     op('res-room').innerHTML = reservationRooms.map((r) => `<option value="${r.id}">${esc(r.number)} · ${esc(r.type)} · ${r.beds} camas</option>`).join('');
-    fillRatesForRoom('res-room', 'res-rate', reservationRooms, reservationRates);
-    if (!op('res-guest').options.length || !op('res-room').options.length || !op('res-rate').options.length) throw new Error('Se requiere al menos un huésped, una habitación disponible y una tarifa activa.');
+    if (!op('res-guest').options.length || !op('res-room').options.length) throw new Error('Se requiere al menos un huésped y una habitación disponible.');
+    await fillRatesForRoom('res-room', 'res-rate', reservationRooms, 'reservation-form-error');
   } catch (err) { opError('reservation-form-error', err); }
 }
 op('new-reservation-btn').addEventListener('click', openReservationForm);
-op('res-room').addEventListener('change', () => fillRatesForRoom('res-room', 'res-rate', reservationRooms, reservationRates));
+op('res-room').addEventListener('change', () => fillRatesForRoom('res-room', 'res-rate', reservationRooms, 'reservation-form-error'));
 op('reservation-form').addEventListener('submit', async (e) => {
   e.preventDefault(); op('reservation-form-error').hidden = true;
-  const payload = { guest_id: Number(op('res-guest').value), room_id: Number(op('res-room').value), rate_id: Number(op('res-rate').value), check_in_at: elSalvadorDateInput(op('res-checkin').value), expected_checkout_at: elSalvadorDateInput(op('res-checkout').value), guests: Number(op('res-guests').value) || 1, notes: op('res-notes').value.trim() || null };
+  if (!op('res-rate').value) { opError('reservation-form-error', new Error('Selecciona una tarifa exacta para este tipo de habitación y cantidad de camas.')); return; }
+  const room = reservationRooms.find((r) => String(r.id) === op('res-room').value);
+  if (!room) { opError('reservation-form-error', new Error('Selecciona una habitación disponible.')); return; }
+  const payload = { guest_id: Number(op('res-guest').value), room_type: room.type, beds: room.type === 'estandar' ? 1 : Number(room.beds), rate_id: Number(op('res-rate').value), check_in_at: elSalvadorDateInput(op('res-checkin').value), expected_checkout_at: elSalvadorDateInput(op('res-checkout').value), guests: Number(op('res-guests').value) || 1, notes: op('res-notes').value.trim() || null };
   try { await Api.createReservation(payload); op('reservation-modal').hidden = true; await loadReservations(1); }
   catch (err) { opError('reservation-form-error', err); }
 });
@@ -102,15 +127,15 @@ op('direct-checkin-btn').addEventListener('click', async () => {
   op('direct-checkin-form').reset(); op('direct-checkin-error').hidden = true; op('direct-checkin-modal').hidden = false;
   op('direct-guest-name').required = true;
   try {
-    const [guests, roomResult, rates] = await Promise.all([Api.guests({ per_page: 100 }), Api.rooms(), Api.rates()]);
+    const [guests, roomResult] = await Promise.all([Api.guests({ per_page: 100 }), Api.rooms()]);
     op('direct-guest').innerHTML = '<option value="">Registrar huésped nuevo</option>' + opList(guests).map((g) => `<option value="${g.id}" data-name="${esc(g.name)}" data-document="${esc(g.document || '')}">${esc(g.name)}</option>`).join('');
-    directRooms = (roomResult.rooms || []).filter((r) => r.active && r.status === 'disponible'); directRates = rates;
+    directRooms = (roomResult.rooms || []).filter((r) => r.active && r.status === 'disponible');
     op('direct-room').innerHTML = directRooms.map((r) => `<option value="${r.id}">${esc(r.number)} · ${esc(r.type)} · ${r.beds} camas</option>`).join('');
-    fillRatesForRoom('direct-room', 'direct-rate', directRooms, directRates);
-    if (!op('direct-room').options.length || !op('direct-rate').options.length) throw new Error('Se requiere una habitación disponible y una tarifa activa.');
+    if (!op('direct-room').options.length) throw new Error('Se requiere una habitación disponible.');
+    await fillRatesForRoom('direct-room', 'direct-rate', directRooms, 'direct-checkin-error');
   } catch (err) { opError('direct-checkin-error', err); }
 });
-op('direct-room').addEventListener('change', () => fillRatesForRoom('direct-room', 'direct-rate', directRooms, directRates));
+op('direct-room').addEventListener('change', () => fillRatesForRoom('direct-room', 'direct-rate', directRooms, 'direct-checkin-error'));
 op('direct-guest').addEventListener('change', (e) => {
   const selected = e.target.selectedOptions[0];
   op('direct-guest-name').required = !e.target.value;
@@ -119,6 +144,7 @@ op('direct-guest').addEventListener('change', (e) => {
 });
 op('direct-checkin-form').addEventListener('submit', async (e) => {
   e.preventDefault(); op('direct-checkin-error').hidden = true;
+  if (!op('direct-rate').value) { opError('direct-checkin-error', new Error('Selecciona una tarifa exacta para este tipo de habitación y cantidad de camas.')); return; }
   const guestId = op('direct-guest').value;
   const payload = { room_id: Number(op('direct-room').value), rate_id: Number(op('direct-rate').value), payment_method: op('direct-method').value };
   if (guestId) payload.guest_id = Number(guestId);

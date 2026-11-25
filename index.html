@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hotel Manager</title>
 <link rel="icon" type="image/png" href="assets/hotel-logo.png">
-<link rel="stylesheet" href="css/styles.css?v=9">
+<link rel="stylesheet" href="css/styles.css?v=10">
 <script src="js/chart.umd.min.js"></script>
 </head>
 <body>
@@ -214,12 +214,13 @@
       <!-- ===== VISTA: TARIFAS ===== -->
       <section id="view-tarifas" class="view" hidden>
         <div class="catalogo-header">
-          <span class="muted">Define cuánto se cobra por horas, noche o 24 horas según el tipo de habitación.</span>
+          <span class="muted">Cada tarifa se aplica únicamente al tipo de habitación y cantidad de camas indicados.</span>
           <button id="new-rate-btn" class="btn-primary">+ Nueva tarifa</button>
         </div>
+        <div id="rates-legacy-alert" class="rate-warning" role="alert" hidden></div>
         <table class="data-table">
-          <thead><tr><th>Nombre</th><th>Tipo de habitación</th><th>Horas</th><th>Precio</th><th>Hora extra</th><th>Estado</th><th></th></tr></thead>
-          <tbody id="rates-tbody"><tr><td colspan="7" class="muted">Cargando…</td></tr></tbody>
+          <thead><tr><th>Nombre</th><th>Tipo</th><th>Camas</th><th>Duración</th><th>Precio</th><th>Hora extra</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="rates-tbody"><tr><td colspan="8" class="muted">Cargando…</td></tr></tbody>
         </table>
       </section>
 
@@ -452,16 +453,19 @@
     <form id="rate-form">
       <label class="field"><span>Nombre (ej. 6 horas, Por noche, 24 horas)</span><input type="text" id="tf-name" required maxlength="100"></label>
       <div class="field-row">
-        <label class="field"><span>Horas incluidas</span><input type="number" id="tf-hours" min="1" max="168" required></label>
         <label class="field"><span>Aplica a</span>
-          <select id="tf-room-type"><option value="">Todas las habitaciones</option><option value="estandar">Estándar</option><option value="especial">Especial</option></select>
+          <select id="tf-room-type" required><option value="" selected disabled>Selecciona tipo…</option><option value="estandar">Estándar</option><option value="especial">Especial</option></select>
+        </label>
+        <label class="field"><span>Camas</span>
+          <select id="tf-beds" required disabled><option value="" selected disabled>Selecciona tipo primero</option><option value="1">1 cama</option><option value="2">2 camas</option><option value="3">3 camas</option><option value="4">4 camas</option></select>
         </label>
       </div>
       <div class="field-row">
+        <label class="field"><span>Horas incluidas</span><input type="number" id="tf-hours" min="1" max="168" required></label>
         <label class="field"><span>Precio</span><input type="number" id="tf-price" step="0.01" min="0" required></label>
-        <label class="field"><span>Precio por hora extra</span><input type="number" id="tf-extra" step="0.01" min="0" value="0" required></label>
       </div>
-      <label id="tf-active-row" class="checkbox-label" style="margin-bottom:16px"><input type="checkbox" id="tf-active" checked> Tarifa activa</label>
+      <label class="field"><span>Precio por hora extra</span><input type="number" id="tf-extra" step="0.01" min="0" value="0" required></label>
+      <label id="tf-active-row" class="checkbox-label" style="margin-bottom:16px"><input type="checkbox" id="tf-active" checked> Tarifa activa (disponible para reservas y estadías)</label>
       <p id="rate-form-error" class="login-error" hidden></p>
       <div class="modal-actions">
         <button type="button" id="rate-cancel-btn" class="btn-secondary">Cancelar</button>
@@ -632,8 +636,8 @@
   </div>
 </div>
 
-<script src="js/api.js?v=5"></script>
-<script src="js/app.js?v=10"></script>
-<script src="js/operations.js?v=1"></script>
+<script src="js/api.js?v=6"></script>
+<script src="js/app.js?v=11"></script>
+<script src="js/operations.js?v=2"></script>
 </body>
 </html>
