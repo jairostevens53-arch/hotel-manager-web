@@ -334,7 +334,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .purchase-item-row {
   display: grid;
-  grid-template-columns: 1fr 80px 100px 32px;
+  grid-template-columns: minmax(130px, 1fr) 70px 80px 90px 32px;
   gap: 8px;
   margin-bottom: 10px;
   align-items: center;
@@ -349,6 +349,8 @@ button { font-family: inherit; cursor: pointer; }
   font-family: inherit;
   width: 100%;
 }
+.purchase-item-row .checkbox-label { grid-column: 1 / 5; }
+.purchase-item-row .checkbox-label input { width: auto; }
 .pi-remove { background: none; border: 1px solid var(--border); color: var(--red); border-radius: 6px; height: 34px; }
 
 .btn-small { padding: 6px 12px; font-size: 12.5px; }

@@ -148,9 +148,20 @@ const Api = {
   sale(id) { return this.request(`/sales/${id}`); },
   cancelSale(id) { return this.request(`/sales/${id}/cancel`, { method: 'POST' }); },
 
-  expenses(page = 1) { return this.request(`/expenses?page=${page}`); },
+  expenses(page = 1, shiftId = null) { return this.request(`/expenses?page=${page}${shiftId ? `&shift_id=${encodeURIComponent(shiftId)}` : ''}`); },
   createExpense(payload) { return this.request('/expenses', { method: 'POST', body: payload }); },
   currentShift() { return this.request('/shifts/current'); },
+  async ensureCurrentShift() {
+    try { return await this.currentShift(); }
+    catch (error) {
+      if (error.status !== 404) throw error;
+      try { return await this.openShift({ opening_amount: 0 }); }
+      catch (openError) {
+        if (openError.status === 409) return this.currentShift();
+        throw openError;
+      }
+    }
+  },
   openShift(payload) { return this.request('/shifts/open', { method: 'POST', body: payload }); },
   closeShift(payload) { return this.request('/shifts/close', { method: 'POST', body: payload }); },
   createSale(payload) { return this.request('/sales', { method: 'POST', body: payload }); },
@@ -193,7 +204,7 @@ const Api = {
   createStay(payload) { return this.request('/stays', { method: 'POST', body: payload }); },
   // GET /stays/{id} devuelve { stay, total_paid }.
   stay(id) { return this.request(`/stays/${id}`); },
-  checkoutStay(id) { return this.request(`/stays/${id}/checkout`, { method: 'POST' }); },
+  checkoutStay(id, payload = {}) { return this.request(`/stays/${id}/checkout`, { method: 'POST', body: payload }); },
   extendStay(id, payload) { return this.request(`/stays/${id}/extend`, { method: 'POST', body: payload }); },
   chargeStay(id, payload) { return this.request(`/stays/${id}/charge`, { method: 'POST', body: payload }); },
 

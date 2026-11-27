@@ -341,10 +341,11 @@ async function loadProducts(query = '') {
           <td>${esc(p.name)}</td>
           <td>${p.category ? esc(p.category.name) : '—'}</td>
           <td>${money(p.price)}</td>
-          <td class="${p.stock <= p.min_stock ? 'stock-low' : ''}">${p.stock}</td>
+          <td class="${p.stock <= p.min_stock ? 'stock-low' : ''}">${p.stock} / ${p.max_stock ?? '—'}</td>
           <td><span class="status-badge ${p.active ? 'status-active' : 'status-inactive'}">${p.active ? 'Activo' : 'Inactivo'}</span></td>
           ${isAdmin() ? `<td class="row-actions">
             <button class="btn-secondary btn-small" data-edit-product="${p.id}">Editar</button>
+            ${p.active ? `<button class="btn-secondary btn-small" data-adjust-product="${p.id}">Ajustar stock</button>` : ''}
             ${p.active ? `<button class="btn-secondary btn-small btn-danger" data-delete-product="${p.id}">Desactivar</button>` : `<button class="btn-secondary btn-small" data-activate-product="${p.id}">Activar</button>`}
           </td>` : '<td></td>'}
         </tr>
@@ -365,6 +366,21 @@ document.getElementById('product-search').addEventListener('input', (e) => {
 const productModal = document.getElementById('product-modal');
 const productForm = document.getElementById('product-form');
 const productFormError = document.getElementById('product-form-error');
+const packageFields = document.getElementById('pf-package-fields');
+function updateInitialProductPrice() {
+  if (editingProductId) return;
+  const packageCost = Number(document.getElementById('pf-package-cost').value) || 0;
+  const units = Number(document.getElementById('pf-units').value) || 0;
+  const packages = Number(document.getElementById('pf-packages').value) || 0;
+  document.getElementById('pf-price').value = units ? (Math.round((packageCost / units) * 1.3 * 100) / 100).toFixed(2) : '';
+  document.getElementById('pf-stock').value = packages * units;
+  const maxField = document.getElementById('pf-max-stock');
+  if (Number(maxField.value) < packages * units) maxField.value = packages * units;
+  document.getElementById('pf-min-stock').value = Math.ceil(Number(maxField.value) * 0.2);
+}
+['pf-package-cost', 'pf-packages', 'pf-units', 'pf-max-stock'].forEach((id) => {
+  document.getElementById(id).addEventListener('input', updateInitialProductPrice);
+});
 
 document.getElementById('new-product-btn').addEventListener('click', () => openProductModal());
 
@@ -386,6 +402,17 @@ async function loadCategoriesIntoForm() {
   }
 }
 
+async function loadSuppliersIntoProductForm() {
+  const select = document.getElementById('pf-supplier');
+  try {
+    const suppliers = await Api.suppliers();
+    select.innerHTML = '<option value="">— Sin proveedor —</option>'
+      + suppliers.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  } catch {
+    select.innerHTML = '<option value="">No se pudieron cargar proveedores</option>';
+  }
+}
+
 productForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   productFormError.hidden = true;
@@ -393,11 +420,19 @@ productForm.addEventListener('submit', async (e) => {
   const payload = {
     name: document.getElementById('pf-name').value.trim(),
     category_id: Number(document.getElementById('pf-category').value),
-    price: Number(document.getElementById('pf-price').value),
-    stock: Number(document.getElementById('pf-stock').value),
     min_stock: Number(document.getElementById('pf-min-stock').value),
+    max_stock: Number(document.getElementById('pf-max-stock').value),
     active: document.getElementById('pf-active').checked,
   };
+  if (!editingProductId) {
+    payload.price = Number(document.getElementById('pf-price').value);
+    payload.stock = Number(document.getElementById('pf-stock').value);
+    payload.units_per_package = Number(document.getElementById('pf-units').value);
+    payload.package_cost = Number(document.getElementById('pf-package-cost').value);
+    payload.initial_packages = Number(document.getElementById('pf-packages').value);
+    const supplierId = document.getElementById('pf-supplier').value;
+    if (supplierId) payload.initial_supplier_id = Number(supplierId);
+  }
 
   try {
     await (editingProductId ? Api.updateProduct(editingProductId, payload) : Api.createProduct(payload));
@@ -436,7 +471,14 @@ async function loadPurchases(page = 1) {
         <tr>
           <td>${new Date(p.created_at).toLocaleDateString('es-SV', { timeZone: 'America/El_Salvador' })}</td>
           <td>${p.supplier ? esc(p.supplier.name) : '—'}</td>
-          <td>${p.items.length} producto(s)</td>
+          <td><ul class="simple-list">${p.items.map((item) => {
+            const name = item.product ? item.product.name : `Producto #${item.product_id}`;
+            const packs = Number(item.package_count) || 0;
+            const detail = packs
+              ? `${packs} paquete(s) × ${Number(item.units_per_package) || 1} uds · ${money(item.subtotal)}`
+              : `${item.quantity} unidad(es) × ${money(item.unit_cost)} · ${money(item.subtotal)}`;
+            return `<li><span>${esc(name)}</span><span>${esc(detail)}</span></li>`;
+          }).join('')}</ul></td>
           <td>${money(p.total)}</td>
         </tr>
       `)
@@ -521,15 +563,18 @@ function addPurchaseItemRow() {
   row.className = 'purchase-item-row';
   row.innerHTML = `
     <select class="pi-product">${productOptions()}</select>
-    <input type="number" class="pi-qty" placeholder="Cant." min="1" value="1">
-    <input type="number" class="pi-cost" placeholder="Costo u." step="0.01" min="0" value="0">
+    <input type="number" class="pi-packages" placeholder="Paquetes" min="1" value="1" aria-label="Paquetes comprados">
+    <input type="number" class="pi-units" placeholder="Unidades/paquete" min="1" value="1" aria-label="Unidades por paquete">
+    <input type="number" class="pi-cost" placeholder="Costo paquete" step="0.01" min="0" value="0" aria-label="Costo por paquete">
+    <label class="checkbox-label"><input type="checkbox" class="pi-update-price" checked> Recalcular precio (+30%)</label>
     <button type="button" class="pi-remove">✕</button>
   `;
   row.querySelector('.pi-remove').addEventListener('click', () => {
     row.remove();
     updatePurchaseTotal();
   });
-  row.querySelector('.pi-qty').addEventListener('input', updatePurchaseTotal);
+  row.querySelector('.pi-packages').addEventListener('input', updatePurchaseTotal);
+  row.querySelector('.pi-units').addEventListener('input', updatePurchaseTotal);
   row.querySelector('.pi-cost').addEventListener('input', updatePurchaseTotal);
   container.appendChild(row);
   updatePurchaseTotal();
@@ -538,7 +583,7 @@ function addPurchaseItemRow() {
 function updatePurchaseTotal() {
   let total = 0;
   document.querySelectorAll('.purchase-item-row').forEach((row) => {
-    const qty = Number(row.querySelector('.pi-qty').value) || 0;
+    const qty = Number(row.querySelector('.pi-packages').value) || 0;
     const cost = Number(row.querySelector('.pi-cost').value) || 0;
     total += qty * cost;
   });
@@ -565,8 +610,10 @@ purchaseForm.addEventListener('submit', async (e) => {
 
   const items = Array.from(document.querySelectorAll('.purchase-item-row')).map((row) => ({
     product_id: Number(row.querySelector('.pi-product').value),
-    quantity: Number(row.querySelector('.pi-qty').value),
-    unit_cost: Number(row.querySelector('.pi-cost').value),
+    packages: Number(row.querySelector('.pi-packages').value),
+    units_per_package: Number(row.querySelector('.pi-units').value),
+    package_cost: Number(row.querySelector('.pi-cost').value),
+    update_price: row.querySelector('.pi-update-price').checked,
   }));
 
   if (!items.length) {
@@ -634,7 +681,8 @@ async function showShiftDetail(id) {
   content.innerHTML = '<p class="muted">Cargando…</p>';
   modal.hidden = false;
   try {
-    const { shift, summary } = await Api.shiftDetail(id);
+    const [{ shift, summary }, expenseResult] = await Promise.all([Api.shiftDetail(id), Api.expenses(1, id)]);
+    const expenses = expenseResult.data || expenseResult;
     content.innerHTML = `
       <ul class="simple-list">
         <li><span>Recepcionista</span><span>${esc(shift.user.name)}</span></li>
@@ -648,6 +696,8 @@ async function showShiftDetail(id) {
         <li><span>Diferencia</span><span class="${shift.difference < 0 ? 'stock-low' : ''}">${shift.difference !== null ? money(shift.difference) : '—'}</span></li>
         ${shift.notes ? `<li><span>Notas</span><span>${esc(shift.notes)}</span></li>` : ''}
       </ul>
+      <h3>Detalle de gastos</h3>
+      ${expenses.length ? `<ul class="simple-list">${expenses.map((expense) => `<li><span>${esc(expense.description)} · ${fmtDate(expense.created_at)}</span><strong>${money(expense.amount)}</strong></li>`).join('')}</ul>` : '<p class="muted">No hay gastos asociados a este turno.</p>'}
     `;
   } catch (err) {
     content.innerHTML = `<p class="login-error" style="margin-top:12px;">${esc(err.message)}</p>`;
@@ -675,30 +725,76 @@ const fmtDate = (v) => new Date(v).toLocaleString('es-SV', { dateStyle: 'short',
 let productsById = {};
 let editingProductId = null;
 
-function openProductModal(product = null) {
+async function openProductModal(product = null) {
+  await loadSuppliersIntoProductForm();
   editingProductId = product ? product.id : null;
   productForm.reset();
   productFormError.hidden = true;
   document.getElementById('product-modal-title').textContent = product ? 'Editar producto' : 'Nuevo producto';
   document.getElementById('pf-stock-label').textContent = product ? 'Stock' : 'Stock inicial';
   document.getElementById('pf-active-row').hidden = !product;
+  packageFields.hidden = !!product;
+  document.getElementById('pf-price').readOnly = true;
+  document.getElementById('pf-stock').readOnly = true;
   if (product) {
     document.getElementById('pf-name').value = product.name;
     document.getElementById('pf-category').value = product.category_id;
     document.getElementById('pf-price').value = product.price;
     document.getElementById('pf-stock').value = product.stock;
     document.getElementById('pf-min-stock').value = product.min_stock;
+    document.getElementById('pf-max-stock').value = product.max_stock ?? 50;
     document.getElementById('pf-active').checked = !!product.active;
+  } else {
+    document.getElementById('pf-packages').value = 1;
+    document.getElementById('pf-units').value = 1;
+    document.getElementById('pf-package-cost').value = '';
+    document.getElementById('pf-supplier').value = '';
+    document.getElementById('pf-max-stock').value = 50;
+    updateInitialProductPrice();
   }
   productModal.hidden = false;
 }
 
+let adjustingProductId = null;
+const stockAdjustModal = document.getElementById('stock-adjust-modal');
+const stockAdjustForm = document.getElementById('stock-adjust-form');
+document.getElementById('stock-adjust-cancel').addEventListener('click', () => { stockAdjustModal.hidden = true; });
+stockAdjustModal.addEventListener('click', (e) => { if (e.target === stockAdjustModal) stockAdjustModal.hidden = true; });
+function openStockAdjustment(product) {
+  adjustingProductId = product.id;
+  document.getElementById('stock-adjust-title').textContent = `Ajustar stock · ${product.name}`;
+  document.getElementById('saf-stock').value = product.stock;
+  document.getElementById('saf-reason').value = 'Corrección de inventario';
+  document.getElementById('saf-note').value = '';
+  document.getElementById('stock-adjust-error').hidden = true;
+  stockAdjustModal.hidden = false;
+}
+stockAdjustForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const error = document.getElementById('stock-adjust-error');
+  error.hidden = true;
+  try {
+    await Api.updateProduct(adjustingProductId, {
+      stock: Number(document.getElementById('saf-stock').value),
+      reason: document.getElementById('saf-reason').value,
+      note: document.getElementById('saf-note').value.trim() || null,
+    });
+    stockAdjustModal.hidden = true;
+    loadProducts(document.getElementById('product-search').value);
+  } catch (err) {
+    error.textContent = err.message;
+    error.hidden = false;
+  }
+});
+
 document.getElementById('products-tbody').addEventListener('click', async (e) => {
   const editBtn = e.target.closest('[data-edit-product]');
+  const adjustBtn = e.target.closest('[data-adjust-product]');
   const delBtn = e.target.closest('[data-delete-product]');
   const actBtn = e.target.closest('[data-activate-product]');
   const reload = () => loadProducts(document.getElementById('product-search').value);
   if (editBtn) return openProductModal(productsById[editBtn.dataset.editProduct]);
+  if (adjustBtn) return openStockAdjustment(productsById[adjustBtn.dataset.adjustProduct]);
   try {
     if (actBtn) {
       await Api.updateProduct(actBtn.dataset.activateProduct, { active: true });
@@ -1146,8 +1242,22 @@ function openRoomModal(room = null) {
     document.getElementById('rf-notes').value = room.notes || '';
     document.getElementById('rf-active').checked = !!room.active;
   }
+  updateRoomBedsControl();
   roomModal.hidden = false;
 }
+
+function updateRoomBedsControl() {
+  const type = document.getElementById('rf-type').value;
+  const beds = document.getElementById('rf-beds');
+  if (type === 'estandar') {
+    beds.value = '1';
+    beds.disabled = true;
+  } else {
+    beds.disabled = false;
+    if (Number(beds.value) < 2) beds.value = '2';
+  }
+}
+document.getElementById('rf-type').addEventListener('change', updateRoomBedsControl);
 
 document.getElementById('new-room-btn').addEventListener('click', () => openRoomModal());
 document.getElementById('room-cancel-btn').addEventListener('click', () => { roomModal.hidden = true; });
@@ -1201,7 +1311,7 @@ const rateBedsSelect = document.getElementById('tf-beds');
 function rateDefinitionIsValid(rate) {
   const beds = Number(rate.beds);
   return (rate.room_type === 'estandar' && beds === 1)
-    || (rate.room_type === 'especial' && Number.isInteger(beds) && beds >= 1 && beds <= 4);
+    || (rate.room_type === 'especial' && Number.isInteger(beds) && beds >= 2 && beds <= 4);
 }
 
 function updateRateFormControls(clearActive = false) {
@@ -1212,6 +1322,7 @@ function updateRateFormControls(clearActive = false) {
   } else if (type === 'especial') {
     rateBedsSelect.disabled = false;
     if (rateForm.dataset.resetBeds === 'true') rateBedsSelect.value = '';
+    if (rateBedsSelect.value === '1') rateBedsSelect.value = '2';
   } else {
     rateBedsSelect.value = '';
     rateBedsSelect.disabled = true;
@@ -1296,7 +1407,7 @@ rateForm.addEventListener('submit', async (e) => {
   if (!rateDefinitionIsValid({ room_type: roomType, beds })) {
     rateFormError.textContent = roomType === 'estandar'
       ? 'Una tarifa estándar debe tener exactamente 1 cama.'
-      : 'Selecciona el tipo de habitación y una cantidad de camas válida (1 a 4).';
+      : 'Selecciona el tipo de habitación y una cantidad de camas válida (2 a 4 para especial).';
     rateFormError.hidden = false;
     return;
   }
@@ -1370,6 +1481,9 @@ async function showStayDetail(id) {
   try {
     const { stay, total_paid: totalPaid } = await Api.stay(id);
     const sales = stay.sales || [];
+    const charges = stay.charges || [];
+    const pendingCharges = charges.filter((charge) => !charge.paid_at);
+    const pendingTotal = pendingCharges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0);
     document.getElementById('stay-detail-title').textContent = `Estadía #${stay.id}`;
     content.innerHTML = `
       <ul class="simple-list">
@@ -1386,6 +1500,8 @@ async function showStayDetail(id) {
         <li><span>Estado</span><span>${badge(STAY_STATUS, stay.status)}</span></li>
         ${stay.notes ? `<li><span>Notas</span><span style="white-space:pre-line;text-align:right">${esc(stay.notes)}</span></li>` : ''}
         ${sales.map((v) => `<li><span>Venta #${esc(v.id)} · ${esc(conceptLabel(v.concept))}${v.status === 'anulada' ? ' (anulada)' : ''}</span><span>${money(v.total)}</span></li>`).join('')}
+        ${charges.map((charge) => `<li><span>${esc(charge.description || `Cargo #${charge.id}`)} · ${charge.paid_at ? 'Pagado' : 'Pendiente'}</span><span>${money(charge.amount)}</span></li>`).join('')}
+        <li><strong>Cargos pendientes</strong><strong>${money(pendingTotal)}</strong></li>
         <li><strong>Total cobrado</strong><strong>${money(totalPaid)}</strong></li>
       </ul>`;
     checkoutBtn.hidden = extendBtn.hidden = chargeBtn.hidden = stay.status !== 'activa';
@@ -1395,14 +1511,9 @@ async function showStayDetail(id) {
 }
 
 document.getElementById('stay-checkout-btn').addEventListener('click', async () => {
-  if (!confirm('¿Registrar la salida del huésped? La habitación pasará a limpieza.')) return;
-  try {
-    await Api.checkoutStay(currentStayId);
-    stayDetailModal.hidden = true;
-    loadStays(staysPage);
-  } catch (err) {
-    alert(`No se pudo registrar la salida: ${err.message}`);
-  }
+  document.getElementById('stay-checkout-error').hidden = true;
+  stayDetailModal.hidden = true;
+  document.getElementById('stay-checkout-modal').hidden = false;
 });
 document.getElementById('stay-detail-close-btn').addEventListener('click', () => { stayDetailModal.hidden = true; });
 stayDetailModal.addEventListener('click', (e) => { if (e.target === stayDetailModal) stayDetailModal.hidden = true; });

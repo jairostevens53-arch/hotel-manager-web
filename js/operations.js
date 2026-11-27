@@ -71,7 +71,10 @@ async function loadReservations(page = 1) {
     const from = op('reservation-filter-from').value, to = op('reservation-filter-to').value;
     const result = await Api.reservations({ page, per_page: 20, ...(status ? { status } : {}), ...(from ? { from } : {}), ...(to ? { to } : {}) });
     reservationRecords = opList(result); renderPager('reservations-pager', result, loadReservations);
-    body.innerHTML = reservationRecords.length ? reservationRecords.map((r) => `<tr><td>${esc(r.guest?.name || '—')}</td><td>${esc(r.room?.number || '—')}</td><td>${esc(r.rate?.name || '—')}</td><td>${opDate(r.check_in_at)}</td><td>${opDate(r.expected_checkout_at)}</td><td>${opStatus(r.status)}</td><td class="row-actions">${r.status === 'confirmada' ? `<button class="btn-primary btn-small" data-checkin-reservation="${r.id}">Check-in</button><button class="btn-secondary btn-small" data-cancel-reservation="${r.id}">Cancelar</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="7" class="muted">No hay reservas para mostrar.</td></tr>';
+    body.innerHTML = reservationRecords.length ? reservationRecords.map((r) => {
+      const roomLabel = r.room?.number || `${r.room_type === 'estandar' ? 'Estándar' : r.room_type === 'especial' ? 'Especial' : 'Habitación'} · ${r.beds || '—'} camas`;
+      return `<tr><td>${esc(r.guest?.name || '—')}</td><td>${esc(roomLabel)}</td><td>${esc(r.rate?.name || '—')}</td><td>${opDate(r.check_in_at)}</td><td>${opDate(r.expected_checkout_at)}</td><td>${opStatus(r.status)}</td><td class="row-actions">${r.status === 'confirmada' ? `<button class="btn-primary btn-small" data-checkin-reservation="${r.id}">Check-in</button><button class="btn-secondary btn-small" data-cancel-reservation="${r.id}">Cancelar</button>` : ''}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="muted">No hay reservas para mostrar.</td></tr>';
   } catch (e) { body.innerHTML = `<tr><td colspan="7" class="muted">Error: ${esc(e.message)}</td></tr>`; }
 }
 op('reservation-filter-status').addEventListener('change', () => loadReservations(1));
@@ -83,24 +86,39 @@ async function openReservationForm() {
   try {
     const [guests, roomsResult] = await Promise.all([Api.guests({ per_page: 100 }), Api.rooms()]);
     const rooms = roomsResult.rooms || [];
-    reservationRooms = rooms.filter((r) => r.active && r.status === 'disponible');
+    const capacities = new Map();
+    rooms.filter((r) => r.active).forEach((room) => {
+      const beds = room.type === 'estandar' ? 1 : Number(room.beds);
+      if (beds < (room.type === 'estandar' ? 1 : 2) || beds > 4) return;
+      const key = `${room.type}:${beds}`;
+      if (!capacities.has(key)) capacities.set(key, { ...room, beds });
+    });
+    reservationRooms = [...capacities.values()];
     op('res-guest').innerHTML = opList(guests).map((g) => `<option value="${g.id}">${esc(g.name)}${g.document ? ` · ${esc(g.document)}` : ''}</option>`).join('');
-    op('res-room').innerHTML = reservationRooms.map((r) => `<option value="${r.id}">${esc(r.number)} · ${esc(r.type)} · ${r.beds} camas</option>`).join('');
-    if (!op('res-guest').options.length || !op('res-room').options.length) throw new Error('Se requiere al menos un huésped y una habitación disponible.');
+    op('res-room').innerHTML = reservationRooms.map((r) => `<option value="${r.id}">${esc(r.type === 'estandar' ? 'Estándar' : 'Especial')} · ${r.beds} ${r.beds === 1 ? 'cama' : 'camas'} (asignación automática)</option>`).join('');
+    if (!op('res-guest').options.length || !op('res-room').options.length) throw new Error('Se requiere al menos un huésped y una capacidad de habitación activa.');
     await fillRatesForRoom('res-room', 'res-rate', reservationRooms, 'reservation-form-error');
+    updateReservationGuestLimit();
   } catch (err) { opError('reservation-form-error', err); }
 }
 op('new-reservation-btn').addEventListener('click', openReservationForm);
-op('res-room').addEventListener('change', () => fillRatesForRoom('res-room', 'res-rate', reservationRooms, 'reservation-form-error'));
 op('reservation-form').addEventListener('submit', async (e) => {
   e.preventDefault(); op('reservation-form-error').hidden = true;
   if (!op('res-rate').value) { opError('reservation-form-error', new Error('Selecciona una tarifa exacta para este tipo de habitación y cantidad de camas.')); return; }
   const room = reservationRooms.find((r) => String(r.id) === op('res-room').value);
-  if (!room) { opError('reservation-form-error', new Error('Selecciona una habitación disponible.')); return; }
+  if (!room) { opError('reservation-form-error', new Error('Selecciona un tipo y capacidad de habitación.')); return; }
+  if (Number(op('res-guests').value) > Number(room.beds)) { opError('reservation-form-error', new Error('La cantidad de huéspedes supera la capacidad seleccionada.')); return; }
   const payload = { guest_id: Number(op('res-guest').value), room_type: room.type, beds: room.type === 'estandar' ? 1 : Number(room.beds), rate_id: Number(op('res-rate').value), check_in_at: elSalvadorDateInput(op('res-checkin').value), expected_checkout_at: elSalvadorDateInput(op('res-checkout').value), guests: Number(op('res-guests').value) || 1, notes: op('res-notes').value.trim() || null };
   try { await Api.createReservation(payload); op('reservation-modal').hidden = true; await loadReservations(1); }
   catch (err) { opError('reservation-form-error', err); }
 });
+function updateReservationGuestLimit() {
+  const room = reservationRooms.find((r) => String(r.id) === op('res-room').value);
+  const input = op('res-guests');
+  input.max = String(room ? Number(room.beds) : 4);
+  if (Number(input.value) > Number(input.max)) input.value = input.max;
+}
+op('res-room').addEventListener('change', () => { updateReservationGuestLimit(); fillRatesForRoom('res-room', 'res-rate', reservationRooms, 'reservation-form-error'); });
 op('reservations-tbody').addEventListener('click', async (e) => {
   const checkin = e.target.closest('[data-checkin-reservation]'); const cancel = e.target.closest('[data-cancel-reservation]');
   try {
@@ -117,9 +135,11 @@ op('reservations-tbody').addEventListener('click', async (e) => {
 op('checkin-form').addEventListener('submit', async (e) => {
   e.preventDefault(); op('checkin-form-error').hidden = true;
   try {
-    await Api.checkInReservation(checkInReservationId, { payment_method: op('checkin-method').value });
+    await Api.ensureCurrentShift();
+    const paymentMethod = op('checkin-method').value;
+    await Api.checkInReservation(checkInReservationId, paymentMethod ? { payment_method: paymentMethod } : {});
     op('checkin-modal').hidden = true;
-    await Promise.all([loadReservations(reservationPage), loadRooms(), loadCurrentShift(), loadSales()]);
+    await Promise.all([loadReservations(reservationPage), loadStays(1), loadRooms(), loadCurrentShift(), loadSales()]);
   } catch (err) { opError('checkin-form-error', err); }
 });
 
@@ -128,28 +148,40 @@ op('direct-checkin-btn').addEventListener('click', async () => {
   op('direct-guest-name').required = true;
   try {
     const [guests, roomResult] = await Promise.all([Api.guests({ per_page: 100 }), Api.rooms()]);
-    op('direct-guest').innerHTML = '<option value="">Registrar huésped nuevo</option>' + opList(guests).map((g) => `<option value="${g.id}" data-name="${esc(g.name)}" data-document="${esc(g.document || '')}">${esc(g.name)}</option>`).join('');
+    op('direct-guest').innerHTML = '<option value="">Registrar huésped nuevo</option>' + opList(guests).map((g) => `<option value="${g.id}" data-name="${esc(g.name)}" data-document="${esc(g.document || '')}" data-phone="${esc(g.phone || '')}">${esc(g.name)}</option>`).join('');
     directRooms = (roomResult.rooms || []).filter((r) => r.active && r.status === 'disponible');
-    op('direct-room').innerHTML = directRooms.map((r) => `<option value="${r.id}">${esc(r.number)} · ${esc(r.type)} · ${r.beds} camas</option>`).join('');
+    op('direct-room').innerHTML = directRooms.map((r) => `<option value="${r.id}">${esc(r.number)} · ${esc(r.type)} · ${r.type === 'estandar' ? 1 : r.beds} ${(r.type === 'estandar' ? 1 : Number(r.beds)) === 1 ? 'cama' : 'camas'}</option>`).join('');
     if (!op('direct-room').options.length) throw new Error('Se requiere una habitación disponible.');
+    updateDirectGuestLimit();
     await fillRatesForRoom('direct-room', 'direct-rate', directRooms, 'direct-checkin-error');
   } catch (err) { opError('direct-checkin-error', err); }
 });
-op('direct-room').addEventListener('change', () => fillRatesForRoom('direct-room', 'direct-rate', directRooms, 'direct-checkin-error'));
+function updateDirectGuestLimit() {
+  const room = directRooms.find((r) => String(r.id) === op('direct-room').value);
+  const input = op('direct-guests');
+  input.max = String(room ? (room.type === 'estandar' ? 1 : Number(room.beds)) : 4);
+  if (Number(input.value) > Number(input.max)) input.value = input.max;
+}
+op('direct-room').addEventListener('change', () => {
+  updateDirectGuestLimit();
+  fillRatesForRoom('direct-room', 'direct-rate', directRooms, 'direct-checkin-error');
+});
 op('direct-guest').addEventListener('change', (e) => {
   const selected = e.target.selectedOptions[0];
   op('direct-guest-name').required = !e.target.value;
-  if (e.target.value) { op('direct-guest-name').value = selected.dataset.name; op('direct-guest-document').value = selected.dataset.document; }
-  else { op('direct-guest-name').value = ''; op('direct-guest-document').value = ''; }
+  if (e.target.value) { op('direct-guest-name').value = selected.dataset.name; op('direct-guest-document').value = selected.dataset.document; op('direct-guest-phone').value = selected.dataset.phone; }
+  else { op('direct-guest-name').value = ''; op('direct-guest-document').value = ''; op('direct-guest-phone').value = ''; }
 });
 op('direct-checkin-form').addEventListener('submit', async (e) => {
   e.preventDefault(); op('direct-checkin-error').hidden = true;
   if (!op('direct-rate').value) { opError('direct-checkin-error', new Error('Selecciona una tarifa exacta para este tipo de habitación y cantidad de camas.')); return; }
   const guestId = op('direct-guest').value;
-  const payload = { room_id: Number(op('direct-room').value), rate_id: Number(op('direct-rate').value), payment_method: op('direct-method').value };
+  const payload = { room_id: Number(op('direct-room').value), rate_id: Number(op('direct-rate').value), rate_units: Number(op('direct-rate-units').value) || 1, guests: Number(op('direct-guests').value) || 1 };
+  const paymentMethod = op('direct-method').value;
+  if (paymentMethod) payload.payment_method = paymentMethod;
   if (guestId) payload.guest_id = Number(guestId);
-  else { payload.guest_name = op('direct-guest-name').value.trim(); payload.guest_document = op('direct-guest-document').value.trim() || null; }
-  try { await Api.createStay(payload); op('direct-checkin-modal').hidden = true; await Promise.all([loadStays(1), loadRooms(), loadCurrentShift(), loadSales()]); }
+  else { payload.guest_name = op('direct-guest-name').value.trim(); payload.guest_document = op('direct-guest-document').value.trim() || null; payload.guest_phone = op('direct-guest-phone').value.trim() || null; }
+  try { await Api.ensureCurrentShift(); await Api.createStay(payload); op('direct-checkin-modal').hidden = true; await Promise.all([loadStays(1), loadRooms(), loadCurrentShift(), loadSales()]); }
   catch (err) { opError('direct-checkin-error', err); }
 });
 
@@ -159,18 +191,42 @@ function openStayAction(kind) {
   const extending = kind === 'extend';
   op('stay-charge-title').textContent = extending ? 'Extender estadía' : 'Agregar cargo';
   op('stay-hours-row').hidden = !extending; op('stay-charge-amount-row').hidden = extending; op('stay-charge-description-row').hidden = extending;
+  op('stay-charge-bill-row').hidden = extending;
+  op('stay-charge-payment-row').hidden = extending || !op('stay-charge-pay-now').checked;
   op('stay-charge-modal').hidden = false;
 }
 op('stay-extend-btn').addEventListener('click', () => openStayAction('extend'));
 op('stay-charge-btn').addEventListener('click', () => openStayAction('charge'));
+op('stay-charge-pay-now').addEventListener('change', (e) => { op('stay-charge-payment-row').hidden = !e.target.checked; });
 op('stay-charge-form').addEventListener('submit', async (e) => {
   e.preventDefault(); op('stay-charge-error').hidden = true;
   const method = op('stay-operation-method').value;
   try {
-    if (stayAction === 'extend') await Api.extendStay(currentStayId, { hours: Number(op('stay-hours').value), payment_method: method });
-    else await Api.chargeStay(currentStayId, { amount: Number(op('stay-charge-amount').value), description: op('stay-charge-description').value.trim() || null, payment_method: method });
+    if (stayAction === 'extend') {
+      await Api.ensureCurrentShift();
+      await Api.extendStay(currentStayId, { hours: Number(op('stay-hours').value), payment_method: method });
+    } else {
+      const payNow = op('stay-charge-pay-now').checked;
+      if (payNow) await Api.ensureCurrentShift();
+      await Api.chargeStay(currentStayId, { amount: Number(op('stay-charge-amount').value), description: op('stay-charge-description').value.trim() || null, pay_now: payNow, ...(payNow ? { payment_method: method } : {}) });
+    }
     op('stay-charge-modal').hidden = true; await Promise.all([showStayDetail(currentStayId), loadSales(), loadCurrentShift()]);
   } catch (err) { opError('stay-charge-error', err); }
+});
+op('stay-checkout-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); op('stay-checkout-error').hidden = true;
+  try {
+    await Api.ensureCurrentShift();
+    await Api.checkoutStay(currentStayId, { payment_method: op('stay-checkout-method').value });
+    op('stay-checkout-modal').hidden = true;
+    await Promise.all([loadStays(staysPage), loadRooms(), loadSales(), loadCurrentShift()]);
+  } catch (err) { opError('stay-checkout-error', err); }
+});
+op('stay-checkout-modal').addEventListener('click', (e) => {
+  if (e.target === op('stay-checkout-modal')) { op('stay-checkout-modal').hidden = true; op('stay-detail-modal').hidden = false; }
+});
+op('stay-checkout-modal').querySelector('[data-close-modal="stay-checkout-modal"]').addEventListener('click', () => {
+  op('stay-detail-modal').hidden = false;
 });
 
 async function loadTasks(page = 1) {
@@ -243,11 +299,21 @@ function openCashForm(kind) {
   op('cash-form').reset(); op('cash-form-error').hidden = true; op('cash-form').dataset.kind = kind;
   op('cash-modal-title').textContent = kind === 'open' ? 'Abrir turno' : kind === 'close' ? 'Cerrar turno' : 'Registrar gasto';
   op('cash-amount-label').textContent = kind === 'open' ? 'Fondo inicial' : kind === 'close' ? 'Efectivo contado' : 'Monto';
-  op('cash-amount').min = kind === 'expense' ? '0.01' : '0'; op('cash-description-row').hidden = kind !== 'expense'; op('cash-notes-row').hidden = kind !== 'close'; op('cash-modal').hidden = false;
+  op('cash-amount').min = kind === 'expense' ? '0.01' : '0'; op('cash-description-row').hidden = kind !== 'expense'; op('cash-description').required = kind === 'expense'; op('cash-notes-row').hidden = kind !== 'close'; op('cash-modal').hidden = false;
 }
 op('open-shift-btn').addEventListener('click', () => openCashForm('open'));
 op('close-shift-btn').addEventListener('click', () => openCashForm('close'));
 op('new-expense-btn').addEventListener('click', () => openCashForm('expense'));
+op('new-expense-page-btn').addEventListener('click', async () => {
+  try {
+    await Api.currentShift();
+    openCashForm('expense');
+  } catch (err) {
+    alert(err.status === 404
+      ? 'Abre primero el turno desde la sección Caja. Así el gasto queda asociado al turno y aparecerá en su historial.'
+      : `No se pudo comprobar el turno abierto: ${err.message}`);
+  }
+});
 op('cash-form').addEventListener('submit', async (e) => {
   e.preventDefault(); const kind = e.currentTarget.dataset.kind; op('cash-form-error').hidden = true;
   const amount = Number(op('cash-amount').value);
