@@ -275,12 +275,12 @@
       <!-- ===== VISTA: GASTOS ===== -->
       <section id="view-gastos" class="view" hidden>
         <div class="catalogo-header">
-          <p class="muted">Registra gastos operativos como reparaciones y mantenimiento. Cada gasto se asocia al turno abierto y aparece en su historial.</p>
+          <p class="muted">Registra gastos operativos como reparaciones y mantenimiento. Si hay un turno propio abierto, el gasto también se incluye en ese cierre.</p>
           <button id="new-expense-page-btn" class="btn-primary">+ Registrar gasto</button>
         </div>
         <table class="data-table">
-          <thead><tr><th>Fecha</th><th>Descripción</th><th>Registrado por</th><th>Monto</th></tr></thead>
-          <tbody id="expenses-tbody"><tr><td colspan="4" class="muted">Cargando…</td></tr></tbody>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th>Registrado por</th><th>Turno de caja</th><th>Monto</th></tr></thead>
+          <tbody id="expenses-tbody"><tr><td colspan="5" class="muted">Cargando…</td></tr></tbody>
         </table>
         <div id="expenses-pager" class="pager"></div>
       </section>

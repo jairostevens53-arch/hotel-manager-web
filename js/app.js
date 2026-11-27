@@ -1008,13 +1008,13 @@ saleModal.addEventListener('click', (e) => { if (e.target === saleModal) saleMod
 // ----- Gastos: consultar -----
 async function loadExpenses(page = 1) {
   const tbody = document.getElementById('expenses-tbody');
-  tbody.innerHTML = '<tr><td colspan="4" class="muted">Cargando…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" class="muted">Cargando…</td></tr>';
   try {
     const result = await Api.expenses(page);
     const expenses = result.data || result;
     renderPager('expenses-pager', result, loadExpenses);
     if (!expenses.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="muted">Aún no hay gastos registrados.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="muted">Aún no hay gastos registrados.</td></tr>';
       return;
     }
     tbody.innerHTML = expenses.map((x) => `
@@ -1022,10 +1022,11 @@ async function loadExpenses(page = 1) {
         <td>${fmtDate(x.created_at)}</td>
         <td>${esc(x.description)}</td>
         <td>${x.user ? esc(x.user.name) : '—'}</td>
+        <td>${x.shift ? (x.shift.closed_at ? 'Turno cerrado' : 'Turno abierto') : 'Sin turno de caja'}</td>
         <td>${money(x.amount)}</td>
       </tr>`).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4" class="muted">Error: ${esc(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="muted">Error: ${esc(err.message)}</td></tr>`;
   }
 }
 

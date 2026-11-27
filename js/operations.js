@@ -305,14 +305,16 @@ op('open-shift-btn').addEventListener('click', () => openCashForm('open'));
 op('close-shift-btn').addEventListener('click', () => openCashForm('close'));
 op('new-expense-btn').addEventListener('click', () => openCashForm('expense'));
 op('new-expense-page-btn').addEventListener('click', async () => {
-  try {
-    await Api.currentShift();
-    openCashForm('expense');
-  } catch (err) {
-    alert(err.status === 404
-      ? 'Abre primero el turno desde la sección Caja. Así el gasto queda asociado al turno y aparecerá en su historial.'
-      : `No se pudo comprobar el turno abierto: ${err.message}`);
+  if (Api.getUser()?.role !== 'admin') {
+    try { await Api.currentShift(); }
+    catch (err) {
+      alert(err.status === 404
+        ? 'Abre primero tu turno desde la sección Caja para registrar el gasto en su cierre.'
+        : `No se pudo comprobar el turno abierto: ${err.message}`);
+      return;
+    }
   }
+  openCashForm('expense');
 });
 op('cash-form').addEventListener('submit', async (e) => {
   e.preventDefault(); const kind = e.currentTarget.dataset.kind; op('cash-form-error').hidden = true;
